@@ -6,23 +6,54 @@ on:
       - "v*"
 
 permissions:
-  contents: write # allow the packager to create a GitHub Release
+  contents: write
 
 jobs:
   release:
-    name: Package & publish
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # full history so the packager can build the changelog
 
-      - name: Package and upload
-        uses: BigWigsMods/packager@master
-        env:
-          # Always available — creates the GitHub Release and attaches the zip.
-          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
-          # Optional — set these repo secrets to also publish to the addon sites.
-          CF_API_KEY: ${{ secrets.CF_API_KEY }}
-          WOWI_API_TOKEN: ${{ secrets.WOWI_API_TOKEN }}
-          WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+      - name: Create addon package
+        run: |
+          mkdir -p release
+          rsync -av \
+            --exclude='.git*' \
+            --exclude='.github' \
+            --exclude='release' \
+            --exclude='Tests' \
+            --exclude='*.md' \
+            --exclude='.editorconfig' \
+            --exclude='.luacheckrc' \
+            --exclude='.pkgmeta' \
+            --exclude='logo*.png' \
+            ./ release/Halo/
+          cd release && zip -r Halo-${{ github.ref_name }}.zip Halo
+
+      - name: Extract changelog
+        id: changelog
+        run: |
+          # Full changelog, minus the "# Changelog" header line.
+          CHANGELOG=$(tail -n +3 CHANGELOG.md)
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Upload to CurseForge
+        uses: itsmeow/curseforge-upload@v3
+        with:
+          token: ${{ secrets.CURSEFORGE_TOKEN }}
+          project_id: 1586547
+          game_endpoint: wow
+          file_path: release/Halo-${{ github.ref_name }}.zip
+          changelog: ${{ steps.changelog.outputs.content }}
+          changelog_type: markdown
+          display_name: Halo ${{ github.ref_name }}
+          game_versions: "WoW Burning Crusade Classic,2.5.5"
+          release_type: release
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/Halo-${{ github.ref_name }}.zip
+          generate_release_notes: true

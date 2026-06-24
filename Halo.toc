@@ -2,7 +2,7 @@
 ## Title: Halo
 ## Notes: Tidy your minimap — gather every addon button into one elegant launcher.
 ## Author: adbergen
-## Version: 1.0.0
+## Version: 1.1.0
 ## SavedVariables: HaloDB
 ## IconTexture: Interface\AddOns\Halo\Media\halo-logo
 ## X-License: MIT
