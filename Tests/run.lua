@@ -43,7 +43,12 @@ print("[1/7] all " .. #FILES .. " files loaded")
 -- Seed two legacy minimap buttons before login.
 mock.fakeMinimapButton("BrokenAddon_MinimapButton")
 mock.fakeMinimapButton("AnotherAddonButton")
-print("[2/7] seeded fake minimap buttons")
+
+-- Seed a Questie-style POI pin: clickable but tiny (w=11). Must NOT be collected.
+local pin = CreateFrame("Button", "QuestieFrame14", Minimap)
+pin:SetSize(11, 11)
+pin:SetScript("OnClick", function() end)
+print("[2/7] seeded fake minimap buttons + a POI pin")
 
 mock.fireEvent("PLAYER_LOGIN")
 assert(ns.db, "saved variables not initialized")
@@ -60,7 +65,10 @@ assert(collected >= 2, "expected >= 2 collected buttons, got " .. collected)
 assert(ns.Collector.byName["Halo"] == nil, "the launcher collected its own button!")
 local launcher = ns.Launcher:GetButton()
 assert(launcher and launcher:GetParent() == Minimap, "launcher should remain on the minimap")
-print("[5/7] collected " .. collected .. " buttons; launcher stays on the minimap")
+
+-- Tiny POI pins must be left alone.
+assert(ns.Collector.byName["QuestieFrame14"] == nil, "a quest POI pin was collected!")
+print("[5/7] collected " .. collected .. " buttons; launcher + POI pins left alone")
 
 -- Tray open/close + every slash branch.
 ns.Flyout:Toggle(); ns.Flyout:Toggle()

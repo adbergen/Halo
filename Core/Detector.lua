@@ -72,10 +72,18 @@ local function isBlizzard(name)
 end
 Detector.isBlizzard = isBlizzard -- exposed for the /halo scan diagnostic
 
+--- A real minimap button responds to clicks; quest/tracking/POI blips do not.
+-- This is the line that separates buttons from minimap noise.
+local function isClickable(frame)
+	if not frame.GetScript then return false end
+	return frame:GetScript("OnClick")
+		or frame:GetScript("OnMouseUp")
+		or frame:GetScript("OnMouseDown")
+		or false
+end
+Detector.isClickable = isClickable
+
 --- Heuristic: does this look like a third-party minimap button?
--- Deliberately permissive: it is better to collect a stray frame the user can
--- opt out of (via /halo config) than to miss real buttons. Blizzard's own
--- frames are filtered out by name in isBlizzard().
 function Detector:IsLegacyCandidate(frame)
 	if type(frame) ~= "table" or not frame.GetObjectType then return false end
 	if frame:IsObjectType("Texture") or frame:IsObjectType("FontString") then return false end
@@ -85,13 +93,16 @@ function Detector:IsLegacyCandidate(frame)
 	if isBlizzard(name) then return false end
 	if self:IsLibDBIconButton(frame) then return false end -- handled by the clean path
 
-	-- Minimap buttons are small and square-ish.
-	local w, h = frame:GetWidth(), frame:GetHeight()
-	if not w or not h or w < 12 or w > 48 or h < 12 or h > 48 then return false end
+	-- Must be clickable: rejects non-interactive decorative frames.
+	if not isClickable(frame) then return false end
 
-	-- A Button brings its own art; a plain Frame must at least carry some region.
-	local hasRegions = frame.GetNumRegions and frame:GetNumRegions() > 0
-	return (frame:IsObjectType("Button") or hasRegions) and true or false
+	-- Size band: real minimap buttons are ~31px. Quest/POI pins (e.g. Questie's
+	-- w=11 markers) are much smaller, so a floor of 20 filters them out while
+	-- keeping genuine buttons.
+	local w, h = frame:GetWidth(), frame:GetHeight()
+	if not w or not h or w < 20 or w > 48 or h < 20 or h > 48 then return false end
+
+	return true
 end
 
 --- All currently-registered LibDBIcon buttons as { name = frame } pairs.

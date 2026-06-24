@@ -230,6 +230,7 @@ function M.fakeMinimapButton(name)
 	local b = CreateFrame("Button", name, Minimap)
 	b:SetSize(31, 31)
 	b:CreateTexture() -- give it a region so it looks button-ish
+	b:SetScript("OnClick", function() end) -- real buttons are clickable
 	return b
 end
 
