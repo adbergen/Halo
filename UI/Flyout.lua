@@ -182,7 +182,10 @@ function Flyout:ApplyLayout()
 		self.panel:SetSize(dim + PADDING, dim + PADDING)
 		Theme:SetPanelOpacity(self.panel, 0)
 	else
-		local cols = math.max(1, math.min(p.columns, math.max(count, 1)))
+		-- Base column count (and thus panel width) on the total collected, not
+		-- the filtered count, so searching doesn't shrink the tray.
+		local widthCount = self.searchActive and ns.Collector:Count() or count
+		local cols = math.max(1, math.min(p.columns, math.max(widthCount, 1)))
 		local rows = math.max(1, math.ceil(math.max(count, 1) / cols))
 		for index, record in ipairs(buttons) do
 			local col = (index - 1) % cols
