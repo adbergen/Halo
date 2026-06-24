@@ -79,6 +79,20 @@ ns.db.profile.ignored["AnotherAddonButton"] = true
 ns.Collector:Rescan()
 assert(ns.Collector.byName["AnotherAddonButton"] == nil,
 	"ignored button should have been released back to the minimap")
-print("[7/7] options panel + ignore-flow OK")
+print("[7/8] options panel + ignore-flow OK")
+
+-- Opt-in Blizzard collection: off by default, collectable when toggled on,
+-- released when toggled back off.
+local mail = CreateFrame("Frame", "MiniMapMailFrame", Minimap)
+mail:SetSize(33, 33)
+ns.Collector:Rescan()
+assert(ns.Collector.byName["MiniMapMailFrame"] == nil, "mail collected while opt-in is off")
+ns.db.profile.collect.mail = true
+ns.Collector:Rescan()
+assert(ns.Collector.byName["MiniMapMailFrame"] ~= nil, "mail not collected after opting in")
+ns.db.profile.collect.mail = false
+ns.Collector:Rescan()
+assert(ns.Collector.byName["MiniMapMailFrame"] == nil, "mail not released after opting out")
+print("[8/8] Blizzard opt-in flow OK")
 
 print("\n\27[32mHALO HEADLESS TEST: PASS\27[0m")

@@ -42,6 +42,8 @@ ns.defaults = {
 		ignored = {},
 		-- Saved tray ordering: order[buttonName] = index.
 		order = {},
+		-- Opt-in collection of specific Blizzard minimap frames.
+		collect = { lfg = false, mail = false, tracking = false, battlefield = false },
 	},
 }
 

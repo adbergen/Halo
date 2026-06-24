@@ -87,6 +87,21 @@ function Options:Setup()
 		function(v) profile().trayScale = v; ns:Refresh() end)),
 		function(c) c.slider:SetValue(profile().trayScale) end)
 
+	-- Opt-in Blizzard buttons section
+	stack(Widgets:Header(panel, L["Collect Blizzard buttons"]), 8)
+	stack(Widgets:Label(panel,
+		L["Pull these default minimap buttons into the tray too."], "textDim"))
+	local function blizzCheck(labelText, key)
+		track(stack(Widgets:Checkbox(panel, labelText,
+			function() return profile().collect[key] end,
+			function(v) profile().collect[key] = v; ns.Collector:Rescan() end)),
+			function(c) c:Refresh() end)
+	end
+	blizzCheck(L["Looking For Group"], "lfg")
+	blizzCheck(L["Mail"], "mail")
+	blizzCheck(L["Tracking"], "tracking")
+	blizzCheck(L["Battlegrounds"], "battlefield")
+
 	-- Collected-buttons list (scrollable, rebuilt on show)
 	stack(Widgets:Header(panel, L["Collected buttons"]), 8)
 	stack(Widgets:Label(panel,

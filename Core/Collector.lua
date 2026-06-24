@@ -177,10 +177,15 @@ end
 function Collector:Rescan()
 	if not self.started then return end
 
-	-- Release collected buttons the user now wants back on the minimap.
+	-- Release collected buttons the user now wants back on the minimap: ones they
+	-- opted out of, and Blizzard frames whose opt-in toggle was turned back off.
 	local toRelease = {}
-	for name in pairs(self.byName) do
-		if self:IsIgnored(name) then toRelease[#toRelease + 1] = name end
+	for name, record in pairs(self.byName) do
+		if self:IsIgnored(name) then
+			toRelease[#toRelease + 1] = name
+		elseif record.source == "blizzard" and not Detector:IsOptedIn(name) then
+			toRelease[#toRelease + 1] = name
+		end
 	end
 	for _, name in ipairs(toRelease) do self:Release(name) end
 

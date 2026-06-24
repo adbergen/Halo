@@ -38,6 +38,15 @@ local BLIZZARD = {
 -- Name prefixes that mark a Blizzard/system frame regardless of suffix.
 local BLIZZARD_PREFIX = { "MiniMap", "Minimap" }
 
+-- Blizzard minimap frames the user can opt into collecting (Config setting key →
+-- candidate frame names, first existing one wins). Off by default.
+local OPTIONAL_BLIZZARD = {
+	lfg         = { "LFGMinimapFrame", "MiniMapLFGFrame" },
+	mail        = { "MiniMapMailFrame" },
+	tracking    = { "MiniMapTracking", "MiniMapTrackingButton" },
+	battlefield = { "MiniMapBattlefieldFrame", "MiniMapBattlefieldButton" },
+}
+
 -- A LibDBIcon button is named like "LibDBIcon10_Questie".
 local LIBDBICON_PREFIX = "LibDBIcon10_"
 
@@ -109,8 +118,39 @@ function Detector:GetLegacyButtons()
 	return found
 end
 
+--- Is this frame name an opted-in Blizzard frame right now?
+function Detector:IsOptedIn(name)
+	local collect = ns.db.profile.collect
+	for key, names in pairs(OPTIONAL_BLIZZARD) do
+		if collect[key] then
+			for _, candidate in ipairs(names) do
+				if candidate == name then return true end
+			end
+		end
+	end
+	return false
+end
+
+--- The opted-in Blizzard frames that currently exist, keyed by name.
+function Detector:GetOptedInBlizzard()
+	local found = {}
+	local collect = ns.db.profile.collect
+	for key, names in pairs(OPTIONAL_BLIZZARD) do
+		if collect[key] then
+			for _, name in ipairs(names) do
+				local frame = _G[name]
+				if frame and frame.GetObjectType then
+					found[name] = frame
+					break -- one frame per category
+				end
+			end
+		end
+	end
+	return found
+end
+
 --- Everything collectable right now, keyed by button name.
--- Each value is { frame = <frame>, source = "libdbicon"|"legacy" }.
+-- Each value is { frame = <frame>, source = "libdbicon"|"legacy"|"blizzard" }.
 function Detector:Scan()
 	local result = {}
 	for name, frame in pairs(self:GetLibDBIconButtons()) do
@@ -119,6 +159,12 @@ function Detector:Scan()
 	for name, frame in pairs(self:GetLegacyButtons()) do
 		if not result[name] then
 			result[name] = { frame = frame, source = "legacy" }
+		end
+	end
+	-- Opt-in Blizzard frames bypass the blacklist and size floor entirely.
+	for name, frame in pairs(self:GetOptedInBlizzard()) do
+		if not result[name] then
+			result[name] = { frame = frame, source = "blizzard" }
 		end
 	end
 	return result

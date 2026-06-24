@@ -6,6 +6,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- Options to opt specific Blizzard minimap frames into the tray: Looking For
+  Group, Mail, Tracking, and Battlegrounds (off by default).
+- `/halo scan` diagnostic listing every collected button's render state.
+
+### Fixed
+- Collected buttons now render inside the tray instead of behind it (LibDBIcon
+  locks its buttons' frame strata via SetFixedFrameStrata; Halo unlocks them and
+  the tray sits at MEDIUM strata to match).
+- Buttons no longer escape back to the minimap (Halo takes sole authority over an
+  adopted button's SetPoint).
+- Layout is fault-tolerant: one problematic button can't abort the whole tray.
+- Quest pins and small map markers are no longer collected (20px size floor).
+
 ## [1.0.0] - 2026-06-23
 
 ### Added

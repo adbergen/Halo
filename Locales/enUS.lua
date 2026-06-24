@@ -59,6 +59,13 @@ L["Tray opacity"] = "Tray opacity"
 L["Background opacity of the tray panel."] = "Background opacity of the tray panel."
 L["Tray scale"] = "Tray scale"
 L["Overall size of the tray panel."] = "Overall size of the tray panel."
+L["Collect Blizzard buttons"] = "Collect Blizzard buttons"
+L["Pull these default minimap buttons into the tray too."]
+	= "Pull these default minimap buttons into the tray too."
+L["Looking For Group"] = "Looking For Group"
+L["Mail"] = "Mail"
+L["Tracking"] = "Tracking"
+L["Battlegrounds"] = "Battlegrounds"
 L["Collected buttons"] = "Collected buttons"
 L["Uncheck a button to keep it on the minimap instead of in the tray."]
 	= "Uncheck a button to keep it on the minimap instead of in the tray."
