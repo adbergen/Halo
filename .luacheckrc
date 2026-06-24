@@ -5,8 +5,8 @@ std = "lua51"
 codes = true
 max_line_length = 140
 
--- Third-party libraries are not ours to lint.
-exclude_files = { "Libs/" }
+-- Third-party libraries and CI tool installs are not ours to lint.
+exclude_files = { "Libs/", ".luarocks/", ".lua/", ".install/" }
 
 -- Common, harmless WoW patterns.
 ignore = {
