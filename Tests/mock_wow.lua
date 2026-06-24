@@ -45,7 +45,12 @@ end
 M.newObject = newObject
 
 local function noop(self) return self end
-FrameMT.__index = function(_, key) return methods[key] or noop end
+FrameMT.__index = function(_, key)
+	-- Internal "__" storage fields must read as nil when unset, not as noop —
+	-- otherwise getters like `self.__height or 0` see a truthy function.
+	if type(key) == "string" and key:sub(1, 2) == "__" then return nil end
+	return methods[key] or noop
+end
 
 -- getters that must return real values
 function methods.GetName(self) return self.__name end
