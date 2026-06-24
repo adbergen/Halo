@@ -39,6 +39,9 @@ function Widgets:HostInTile(tile, button)
 	button:SetParent(tile)
 	button:ClearAllPoints()
 	button:SetPoint("CENTER", tile, "CENTER", 0, 0)
+	-- LibDBIcon buttons live at MEDIUM strata; lift them to the tray's strata so
+	-- they render in front of the panel background instead of hidden behind it.
+	button:SetFrameStrata(tile:GetFrameStrata())
 	button:SetFrameLevel(tile:GetFrameLevel() + 2)
 	button.haloTile = tile
 
