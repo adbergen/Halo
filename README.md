@@ -1,8 +1,6 @@
 <div align="center">
 
-<img src="logo.png" alt="Halo logo" width="180"/>
-
-# Halo
+<img src="logo-wordmark.png" alt="Halo" width="480"/>
 
 **One ring to gather them all.**
 
