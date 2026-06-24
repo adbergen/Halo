@@ -24,7 +24,7 @@ local BLIZZARD = {
 	MiniMapTracking = true, MiniMapTrackingButton = true, MiniMapTrackingFrame = true,
 	MiniMapMailFrame = true, MiniMapMailIcon = true,
 	MiniMapBattlefieldFrame = true, MiniMapWorldMapButton = true,
-	MiniMapLFGFrame = true, MiniMapInstanceDifficulty = true,
+	MiniMapLFGFrame = true, LFGMinimapFrame = true, MiniMapInstanceDifficulty = true,
 	GuildInstanceDifficulty = true, MiniMapChallengeMode = true,
 	GameTimeFrame = true, TimeManagerClockButton = true,
 	QueueStatusMinimapButton = true, QueueStatusButton = true,
@@ -70,9 +70,10 @@ function Detector:IsLegacyCandidate(frame)
 	if isBlizzard(name) then return false end
 	if self:IsLibDBIconButton(frame) then return false end -- handled by the clean path
 
-	-- Real minimap buttons are small, square-ish, and carry an icon texture.
+	-- Real minimap buttons are ~31px. A floor of 20 filters out small map
+	-- markers and quest pins (e.g. NWBNaxxMarkerMini w=13, Questie pins w=11).
 	local w, h = frame:GetWidth(), frame:GetHeight()
-	if not w or not h or w < 12 or w > 48 or h < 12 or h > 48 then return false end
+	if not w or not h or w < 20 or w > 48 or h < 20 or h > 48 then return false end
 
 	local hasTexture = (frame.GetNumRegions and frame:GetNumRegions() > 0)
 		or frame:IsObjectType("Button")

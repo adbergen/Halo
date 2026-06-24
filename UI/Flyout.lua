@@ -29,7 +29,10 @@ function Flyout:Create()
 	if self.panel then return end
 
 	local panel = CreateFrame("Frame", "HaloTray", UIParent)
-	panel:SetFrameStrata("DIALOG")
+	-- MEDIUM matches the strata LibDBIcon locks its buttons to, so collected
+	-- buttons render above the panel background (as its children) regardless of
+	-- LibDBIcon's SetFixedFrameStrata lock.
+	panel:SetFrameStrata("MEDIUM")
 	panel:SetClampedToScreen(true)
 	panel:EnableMouse(true)
 	panel:Hide()
