@@ -25,7 +25,7 @@ globals = {
 read_globals = {
 	"CreateFrame", "UIParent", "Minimap", "MinimapBackdrop", "GameTooltip",
 	"C_Timer", "C_AddOns", "GetAddOnMetadata", "hooksecurefunc", "LibStub",
-	"Settings", "SlashCmdList", "MouseIsOver", "wipe", "unpack",
+	"Settings", "SlashCmdList", "MouseIsOver", "wipe", "unpack", "GetCursorPosition",
 	"GameFontNormal", "GameFontNormalLarge", "GameFontHighlight",
 	"GameFontHighlightSmall", "GameFontDisableSmall",
 }
@@ -36,6 +36,6 @@ files["Tests/"] = {
 		"CreateFrame", "hooksecurefunc", "C_Timer", "C_AddOns",
 		"GetAddOnMetadata", "MouseIsOver", "wipe", "SlashCmdList", "Settings",
 		"LibStub", "UIParent", "Minimap", "MinimapBackdrop", "GameTooltip",
-		"unpack",
+		"unpack", "GetCursorPosition",
 	},
 }

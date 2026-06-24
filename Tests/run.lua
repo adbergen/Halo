@@ -62,6 +62,12 @@ local launcher = ns.Launcher:GetButton()
 assert(launcher and launcher:GetParent() == Minimap, "launcher should remain on the minimap")
 print("[5/7] collected " .. collected .. " buttons; launcher stays on the minimap")
 
+-- Drag-to-reorder logic: move a button to the front of the tray order.
+ns.Flyout:MoveButton("BrokenAddon_MinimapButton", 1)
+assert(ns.db.profile.order["BrokenAddon_MinimapButton"] == 1, "reorder did not record position")
+assert(ns.Collector:GetButtons()[1].name == "BrokenAddon_MinimapButton", "reorder did not take effect")
+print("[5b] drag-reorder logic OK")
+
 -- Tray open/close + every slash branch.
 ns.Flyout:Toggle(); ns.Flyout:Toggle()
 ns.Flyout:Open();   ns.Flyout:Close()

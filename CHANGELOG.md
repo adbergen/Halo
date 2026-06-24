@@ -7,6 +7,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Drag-to-reorder buttons within the tray (grid mode); order is saved.
+- Radial layout mode — buttons orbit the launcher in a ring.
+- Search box that appears once 10+ buttons are collected and filters the tray.
+- Profile management UI (create/switch/copy/delete) via AceDB profiles.
+- Masque skinning support for the launcher button.
 - Options to opt specific Blizzard minimap frames into the tray: Looking For
   Group, Mail, Tracking, and Battlegrounds (off by default).
 - `/halo scan` diagnostic listing every collected button's render state.

@@ -83,6 +83,16 @@ function Collector:Adopt(name, frame, source)
 		frame.SetPoint = blockedSetPoint
 	end
 
+	-- Drag-to-reorder. The button's own minimap-drag is neutralized by the
+	-- SetPoint block, so we repurpose its drag to reorder the tray. WoW still
+	-- distinguishes a click from a drag, so left-clicking the button works.
+	if not frame.haloDragHooked then
+		frame.haloDragHooked = true
+		if frame.RegisterForDrag then frame:RegisterForDrag("LeftButton") end
+		frame:HookScript("OnDragStart", function() ns.Flyout:BeginDrag(name) end)
+		frame:HookScript("OnDragStop", function() ns.Flyout:EndDrag() end)
+	end
+
 	self.byName[name] = record
 	self.byFrame[frame] = record
 	self.order[#self.order + 1] = name

@@ -90,6 +90,7 @@ end
 function Flyout:SetupAutoHide()
 	local elapsed, panel = 0, self.panel
 	panel:SetScript("OnUpdate", function(_, dt)
+		if self.dragging then elapsed = 0; return end -- never auto-hide mid-drag
 		if not (self.isOpen and ns.db.profile.autoHide) then return end
 		local launcher = ns.Launcher and ns.Launcher:GetButton()
 		local editBox = self.search and self.search.editBox
@@ -255,4 +256,69 @@ end
 
 function Flyout:Toggle()
 	if self.isOpen then self:Close() else self:Open() end
+end
+
+-- ─── Drag-to-reorder (grid mode) ─────────────────────────────────────
+
+--- Start dragging a collected button; its tile follows the cursor.
+function Flyout:BeginDrag(name)
+	if ns.db.profile.layout ~= "grid" then return end
+	if self.searchActive and (self.searchText or "") ~= "" then return end
+	local record = ns.Collector.byName[name]
+	local tile = record and record.frame.haloTile
+	if not tile then return end
+
+	self.dragging = record
+	tile:SetFrameLevel(tile:GetFrameLevel() + 20)
+	tile:SetScript("OnUpdate", function()
+		local scale = tile:GetEffectiveScale()
+		local cx, cy = GetCursorPosition()
+		tile:ClearAllPoints()
+		tile:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cx / scale, cy / scale)
+	end)
+end
+
+--- Drop the dragged button into the slot under the cursor and persist order.
+function Flyout:EndDrag()
+	local record = self.dragging
+	if not record then return end
+	self.dragging = nil
+
+	local tile = record.frame.haloTile
+	if tile then tile:SetScript("OnUpdate", nil) end
+
+	local p = ns.db.profile
+	local count = #self:GetVisibleButtons()
+	local cols = math.max(1, math.min(p.columns, math.max(count, 1)))
+	local cell = p.tileSize + p.spacing
+
+	local target = count
+	local gx, gy = self.grid:GetLeft(), self.grid:GetTop()
+	if gx and gy then
+		local scale = self.grid:GetEffectiveScale()
+		local cx, cy = GetCursorPosition()
+		cx, cy = cx / scale, cy / scale
+		local col = math.max(0, math.min(cols - 1, math.floor((cx - gx) / cell)))
+		local row = math.max(0, math.floor((gy - cy) / cell))
+		target = row * cols + col + 1
+	end
+	self:MoveButton(record.name, target)
+end
+
+--- Move a button to targetIndex in the saved tray order and relayout.
+function Flyout:MoveButton(name, targetIndex)
+	local names = {}
+	for _, record in ipairs(self:GetVisibleButtons()) do names[#names + 1] = record.name end
+
+	local from
+	for i, n in ipairs(names) do
+		if n == name then from = i; table.remove(names, i) break end
+	end
+	if not from then return end
+
+	targetIndex = math.max(1, math.min(#names + 1, targetIndex))
+	table.insert(names, targetIndex, name)
+	for i, n in ipairs(names) do ns.db.profile.order[n] = i end
+
+	self:ApplyLayout()
 end

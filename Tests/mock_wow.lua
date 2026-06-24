@@ -73,6 +73,8 @@ function methods.GetEffectiveScale() return 1 end
 function methods.GetCenter() return 400, 300 end
 function methods.GetFrameLevel() return 0 end
 function methods.GetVerticalScroll() return 0 end
+function methods.GetLeft() return 0 end
+function methods.GetTop() return 0 end
 function methods.GetValue(self) return self.__value or 0 end
 function methods.SetValue(self, v) self.__value = v; return self end
 function methods.IsForbidden() return false end
@@ -140,6 +142,7 @@ C_AddOns = { GetAddOnMetadata = function(_, key) return key == "Version" and "1.
 function GetAddOnMetadata(_, key) return key == "Version" and "1.0.0-test" or "" end
 
 function MouseIsOver() return false end
+function GetCursorPosition() return 0, 0 end
 function wipe(t) for k in pairs(t) do t[k] = nil end return t end
 
 SlashCmdList = {}
