@@ -189,6 +189,8 @@ function Options:RegisterSlash()
 			ns.db:ResetProfile()
 			self:RefreshControls()
 			ns:Print(L["Settings reset to defaults."])
+		elseif msg == "scan" then
+			for _, line in ipairs(ns.Collector:Dump()) do print(line) end
 		elseif msg == "help" then
 			ns:Print(L["Commands:"])
 			ns:Print("|cff66b3ff/halo|r — " .. L["toggle the button tray"])

@@ -144,6 +144,29 @@ function Collector:GetKnownNames()
 	return names
 end
 
+--- Diagnostic: report each collected button's actual render state.
+function Collector:Dump()
+	local lines = { ("|cff66b3ffHalo|r collected %d:"):format(self:Count()) }
+	for _, record in ipairs(self:GetButtons()) do
+		local b = record.frame
+		local parent = b:GetParent()
+		local pname = (parent and parent.GetName and parent:GetName()) or "?"
+		local icon = b.icon
+		local tex = icon and icon.GetTexture and icon:GetTexture()
+		lines[#lines + 1] = ("  %s shown=%s a=%.1f parent=%s strata=%s lvl=%d w=%d icon=%s")
+			:format(
+				record.name,
+				tostring(b:IsShown()),
+				b:GetAlpha() or 0,
+				pname,
+				b:GetFrameStrata() or "?",
+				b:GetFrameLevel() or 0,
+				math.floor((b:GetWidth() or 0) + 0.5),
+				tex and "yes" or "NO")
+	end
+	return lines
+end
+
 --- Adopt anything new, release anything now ignored, then relayout.
 function Collector:Rescan()
 	if not self.started then return end
