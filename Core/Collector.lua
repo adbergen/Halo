@@ -28,6 +28,7 @@ Collector.order = {}      -- ordered array of button names (tray order)
 Collector.byName = {}     -- name  -> record { name, frame, source, origin }
 Collector.byFrame = {}    -- frame -> record
 Collector.placing = false -- reserved for layout coordination
+Collector.failures = {}   -- name -> error string from hosting (shown by /halo scan)
 
 local function blockedSetPoint() end -- installed on adopted buttons
 
@@ -163,6 +164,9 @@ function Collector:Dump()
 				b:GetFrameLevel() or 0,
 				math.floor((b:GetWidth() or 0) + 0.5),
 				tex and "yes" or "NO")
+	end
+	for name, err in pairs(self.failures) do
+		lines[#lines + 1] = ("|cffff5555host failed|r [%s]: %s"):format(name, err)
 	end
 	return lines
 end

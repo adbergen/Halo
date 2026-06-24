@@ -129,8 +129,15 @@ function Flyout:ApplyLayout()
 		tile:SetPoint("TOPLEFT", self.grid, "TOPLEFT",
 			col * (size + spacing), -row * (size + spacing))
 
-		Widgets:HostInTile(tile, record.frame)
-		record.frame:Show()
+		-- Host each button independently: one frame that refuses to anchor must
+		-- not abort the whole layout (which would leave the rest un-hosted).
+		local ok, err = pcall(Widgets.HostInTile, Widgets, tile, record.frame)
+		if ok then
+			pcall(record.frame.Show, record.frame)
+			ns.Collector.failures[record.name] = nil
+		else
+			ns.Collector.failures[record.name] = tostring(err)
+		end
 	end
 
 	local gridW = cols * size + (cols - 1) * spacing
