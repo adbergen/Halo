@@ -24,6 +24,24 @@ local LEFT = 10            -- content left margin
 local function profile() return ns.db.profile end
 local function prettyName(name) return (name:gsub("^LibDBIcon10_", "")) end
 
+local function profileOptions()
+	local list = {}
+	if not ns.db then return list end
+	for _, name in ipairs(ns.db:GetProfiles()) do list[#list + 1] = { value = name, text = name } end
+	table.sort(list, function(a, b) return a.text < b.text end)
+	return list
+end
+
+local function copyFromOptions()
+	local list = { { value = "", text = L["Copy from..."] } }
+	if not ns.db then return list end
+	local current = ns.db:GetCurrentProfile()
+	for _, name in ipairs(ns.db:GetProfiles()) do
+		if name ~= current then list[#list + 1] = { value = name, text = name } end
+	end
+	return list
+end
+
 -- ─── Canvas construction ─────────────────────────────────────────────
 
 function Options:Setup()
@@ -135,6 +153,40 @@ function Options:Setup()
 		function() return profile().trayScale end,
 		function(v) profile().trayScale = v; ns:Refresh() end)),
 		function(c) c.slider:SetValue(profile().trayScale) end)
+
+	-- Profiles
+	stack(Widgets:Header(content, L["Profiles"]), 8)
+	stack(Widgets:Label(content,
+		L["Save settings as named profiles and reuse them across characters."], "textDim"))
+	track_(stack(Widgets:Dropdown(content, 200, profileOptions,
+		function() return ns.db:GetCurrentProfile() end,
+		function(v) ns.db:SetProfile(v) end)),
+		function(c) c.Refresh() end)
+
+	local newName = ""
+	local nameBox = stack(Widgets:EditBox(content, 200, L["New profile name"],
+		function(t) newName = t end))
+	stack(Widgets:Button(content, L["Create / switch"], function()
+		newName = (newName or ""):gsub("^%s+", ""):gsub("%s+$", "")
+		if newName ~= "" then
+			ns.db:SetProfile(newName)
+			nameBox.editBox:SetText("")
+			newName = ""
+		end
+	end))
+
+	track_(stack(Widgets:Dropdown(content, 200, copyFromOptions,
+		function() return "" end,
+		function(v) if v and v ~= "" then ns.db:CopyProfile(v) end end)),
+		function(c) c.Refresh() end)
+
+	stack(Widgets:Button(content, L["Delete current profile"], function()
+		local cur = ns.db:GetCurrentProfile()
+		if cur ~= "Default" then
+			ns.db:SetProfile("Default")
+			ns.db:DeleteProfile(cur)
+		end
+	end))
 
 	-- Opt-in Blizzard buttons
 	stack(Widgets:Header(content, L["Collect Blizzard buttons"]), 8)

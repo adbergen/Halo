@@ -74,4 +74,11 @@ L["Uncheck a button to keep it on the minimap instead of in the tray."]
 	= "Uncheck a button to keep it on the minimap instead of in the tray."
 L["No addon buttons have been detected yet."]
 	= "No addon buttons have been detected yet."
+L["Profiles"] = "Profiles"
+L["Save settings as named profiles and reuse them across characters."]
+	= "Save settings as named profiles and reuse them across characters."
+L["New profile name"] = "New profile name"
+L["Create / switch"] = "Create / switch"
+L["Copy from..."] = "Copy from..."
+L["Delete current profile"] = "Delete current profile"
 L["Reset to defaults"] = "Reset to defaults"

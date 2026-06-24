@@ -168,6 +168,11 @@ local fakeAceDB = {
 			profile = deepcopy(defaults.profile),
 			RegisterCallback = function() end,
 			ResetProfile = function() db.profile = deepcopy(defaults.profile) end,
+			GetProfiles = function() return { "Default" } end,
+			GetCurrentProfile = function() return "Default" end,
+			SetProfile = function() end,
+			CopyProfile = function() end,
+			DeleteProfile = function() end,
 		}
 		return db
 	end,

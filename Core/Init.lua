@@ -57,9 +57,13 @@ end
 
 --- Re-apply settings across modules after a profile change or options edit.
 function ns:Refresh()
+	if ns.Collector then ns.Collector:Rescan() end -- also relayouts the tray
 	if ns.Launcher then ns.Launcher:Refresh() end
 	if ns.Flyout then ns.Flyout:ApplyLayout() end
-	if ns.Collector then ns.Collector:Rescan() end
+	if ns.Options and ns.Options.panel then
+		ns.Options:RefreshControls()
+		ns.Options:RebuildButtonList()
+	end
 end
 
 local function onLogin()
