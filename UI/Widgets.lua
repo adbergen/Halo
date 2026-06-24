@@ -42,8 +42,12 @@ function Widgets:HostInTile(tile, button)
 	-- it back to the minimap); position it through the saved original instead.
 	local setPoint = button.haloSetPoint or button.SetPoint
 	setPoint(button, "CENTER", tile, "CENTER", 0, 0)
-	-- LibDBIcon buttons live at MEDIUM strata; lift them to the tray's strata so
-	-- they render in front of the panel background instead of hidden behind it.
+	-- LibDBIcon locks its buttons to MEDIUM strata / level 8 with
+	-- SetFixedFrameStrata/Level, so a plain SetFrameStrata is ignored and the
+	-- button stays hidden behind the tray. Unlock first, then lift to the tray's
+	-- strata so it renders in front of the panel background.
+	if button.SetFixedFrameStrata then button:SetFixedFrameStrata(false) end
+	if button.SetFixedFrameLevel then button:SetFixedFrameLevel(false) end
 	button:SetFrameStrata(tile:GetFrameStrata())
 	button:SetFrameLevel(tile:GetFrameLevel() + 2)
 	button.haloTile = tile
