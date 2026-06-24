@@ -34,7 +34,7 @@ end
 local FILES = {
 	"Locales/enUS.lua",
 	"Core/Init.lua", "Core/Detector.lua", "Core/Collector.lua", "Core/Launcher.lua",
-	"UI/Theme.lua", "UI/Widgets.lua", "UI/Flyout.lua",
+	"UI/Theme.lua", "UI/Animation.lua", "UI/Widgets.lua", "UI/Flyout.lua",
 	"Config/Options.lua",
 }
 for _, file in ipairs(FILES) do loadAddOnFile(file) end

@@ -7,7 +7,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
-- Drag-to-reorder buttons within the tray (grid mode); order is saved.
+- Drag-to-reorder buttons within the tray (grid mode); order is saved. A ghost
+  icon lifts and follows the cursor while the other tiles glide to open a gap at
+  the drop slot (midpoint targeting), then the ghost flies into place and fades.
+- Shared eased-tween engine (UI/Animation.lua) powering the drag/drop motion.
 - Radial layout mode — buttons orbit the launcher in a ring.
 - Search box that appears once 10+ buttons are collected and filters the tray.
 - Profile management UI (create/switch/copy/delete) via AceDB profiles.

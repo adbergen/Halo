@@ -59,8 +59,40 @@ function Flyout:Create()
 	empty:Hide()
 	self.emptyLabel = empty
 
+	-- Floating ghost shown while dragging (the real tile hides and this stands
+	-- in for it, following the cursor).
+	local ghost = CreateFrame("Frame", "HaloDragGhost", UIParent)
+	ghost:SetFrameStrata("TOOLTIP")
+	ghost:Hide()
+	local glow = ghost:CreateTexture(nil, "BACKGROUND")
+	glow:SetPoint("TOPLEFT", -3, 3)
+	glow:SetPoint("BOTTOMRIGHT", 3, -3)
+	glow:SetColorTexture(unpack(Theme.colors.accent))
+	glow:SetAlpha(0.5)
+	local gicon = ghost:CreateTexture(nil, "ARTWORK")
+	gicon:SetAllPoints()
+	ghost.icon = gicon
+	self.ghost = ghost
+
 	self:SetupAnimations()
 	self:SetupDriver()
+end
+
+-- Best icon texture (+ texcoords) to represent a button in the drag ghost.
+local function buttonIcon(button)
+	local icon = button.icon
+	if icon and icon.GetTexture and icon:GetTexture() then
+		return icon:GetTexture(), { icon:GetTexCoord() }
+	end
+	if button.GetRegions then
+		for _, region in ipairs({ button:GetRegions() }) do
+			if region.GetObjectType and region:IsObjectType("Texture")
+				and region.GetTexture and region:GetTexture() then
+				return region:GetTexture(), { region:GetTexCoord() }
+			end
+		end
+	end
+	return "Interface\\Icons\\INV_Misc_QuestionMark"
 end
 
 function Flyout:SetupAnimations()
@@ -308,8 +340,9 @@ function Flyout:HoverIndex(cx, cy)
 	local n = #(self.dragVisible or {})
 	local gx, gy = self.grid:GetLeft(), self.grid:GetTop()
 	if not gx or not gy then return n end
-	local col = math.max(0, math.min(cols - 1, math.floor((cx - gx) / cell)))
-	local row = math.max(0, math.floor((gy - cy) / cell))
+	-- +0.5 so the target flips at each cell's midpoint (less travel, better feel).
+	local col = math.max(0, math.min(cols - 1, math.floor((cx - gx) / cell + 0.5)))
+	local row = math.max(0, math.floor((gy - cy) / cell + 0.5))
 	return math.max(1, math.min(n, row * cols + col + 1))
 end
 
@@ -349,58 +382,92 @@ function Flyout:BeginDrag(name)
 	self.dragging = record
 	self.dragVisible = self:GetVisibleButtons()
 	self.dragCols = math.max(1, math.min(ns.db.profile.columns, math.max(#self.dragVisible, 1)))
-	self.dragHover = nil
-	tile.dragBaseLevel = tile:GetFrameLevel()
-	tile:SetFrameLevel(tile:GetFrameLevel() + 20)
-	tile:SetScale(1.12)
-	if tile.highlight then tile.highlight:Show() end
+	self.dragHover = 1
+	for i, rec in ipairs(self.dragVisible) do
+		if rec == record then self.dragHover = i break end
+	end
 
-	tile:SetScript("OnUpdate", function()
-		local scale = tile:GetEffectiveScale()
+	local size = ns.db.profile.tileSize
+	tile:Hide() -- the ghost stands in for the real tile while dragging
+
+	-- Populate and lift the ghost.
+	local ghost = self.ghost
+	local tex, coords = buttonIcon(record.frame)
+	ghost.icon:SetTexture(tex)
+	if coords and #coords >= 4 then
+		ghost.icon:SetTexCoord(unpack(coords))
+	else
+		ghost.icon:SetTexCoord(0, 1, 0, 1)
+	end
+	ghost:SetSize(size, size)
+	ghost:SetAlpha(0)
+	ghost:Show()
+	ns.Animation.Run("halo_lift", 0, 1, ns.Animation.ANIM.LIFT, function(v)
+		local s = size * (1 + 0.12 * v)
+		ghost:SetSize(s, s)
+		ghost:SetAlpha(0.95 * v)
+	end)
+
+	-- Follow the cursor and open the gap under it.
+	ghost:SetScript("OnUpdate", function()
+		local scale = UIParent:GetEffectiveScale()
 		local cx, cy = GetCursorPosition()
 		cx, cy = cx / scale, cy / scale
-		tile:ClearAllPoints()
-		tile:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cx, cy)
+		ghost:ClearAllPoints()
+		ghost:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cx, cy)
 		local idx = self:HoverIndex(cx, cy)
 		if idx ~= self.dragHover then
 			self.dragHover = idx
 			self:ReflowDuringDrag(idx)
 		end
 	end)
-	self:ReflowDuringDrag(self:HoverIndexFromTile(tile))
-end
-
---- Best-effort initial hover index from the tile's current spot.
-function Flyout:HoverIndexFromTile(tile)
-	if not self.grid:GetLeft() or not tile:GetLeft() then return 1 end
-	return self:HoverIndex(tile:GetLeft(), tile:GetTop())
+	self:ReflowDuringDrag(self.dragHover)
 end
 
 function Flyout:EndDrag()
 	local record = self.dragging
 	if not record then return end
-	local tile = record.frame.haloTile
+	local ghost = self.ghost
+	ghost:SetScript("OnUpdate", nil)
+	ns.Animation.Cancel("halo_lift")
+
 	local seq = self.dragSeq
+	local p = ns.db.profile
+	local size, spacing, cols = p.tileSize, p.spacing, self.dragCols
 
-	if tile then
-		tile:SetScript("OnUpdate", nil)
-		tile:SetScale(1)
-		if tile.highlight then tile.highlight:Hide() end
-		tile:SetFrameLevel(tile.dragBaseLevel or self.grid:GetFrameLevel() + 1)
-		-- Seed the dropped tile's current grid-local position so it eases from
-		-- where it was released into its final slot.
-		local gx, gy = self.grid:GetLeft(), self.grid:GetTop()
-		if gx and gy and tile:GetLeft() then
-			tile.x = tile:GetLeft() - gx
-			tile.y = tile:GetTop() - gy
-		end
-	end
-
-	self.dragging, self.dragSeq, self.dragHover, self.dragVisible = nil, nil, nil, nil
+	-- Where the dragged button ends up, and commit the new order.
+	local idx = self.dragHover or 1
 	if seq then
+		for i, rec in ipairs(seq) do if rec == record then idx = i break end end
 		for i, rec in ipairs(seq) do ns.db.profile.order[rec.name] = i end
 	end
-	self:ApplyLayout() -- animate everything (incl. the dropped tile) into place
+	self.dragging, self.dragSeq, self.dragHover, self.dragVisible = nil, nil, nil, nil
+
+	local function finish()
+		ghost:Hide()
+		ghost:SetSize(size, size)
+		ghost:SetAlpha(0.95)
+		self:ApplyLayout(true) -- real tile reappears, snapped where the ghost landed
+	end
+
+	-- Fly the ghost to its landing slot, then fade it out and reveal the tile.
+	local col = (idx - 1) % cols
+	local row = math.floor((idx - 1) / cols)
+	local gx, gy = self.grid:GetLeft(), self.grid:GetTop()
+	local sx, sy = ghost:GetCenter()
+	if gx and gy and sx and sy then
+		local ex = gx + col * (size + spacing) + size / 2
+		local ey = gy - row * (size + spacing) - size / 2
+		ns.Animation.Run("halo_drop", 0, 1, ns.Animation.ANIM.DROP_MOVE, function(_, prog)
+			ghost:ClearAllPoints()
+			ghost:SetPoint("CENTER", UIParent, "BOTTOMLEFT", sx + (ex - sx) * prog, sy + (ey - sy) * prog)
+		end, function()
+			ns.Animation.Run("halo_dropfade", 0.95, 0, ns.Animation.ANIM.DROP_FADE,
+				function(a) ghost:SetAlpha(a) end, finish)
+		end)
+	else
+		finish()
+	end
 end
 
 --- Move a button to targetIndex in the saved tray order and relayout. Used by
