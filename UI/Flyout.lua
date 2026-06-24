@@ -129,8 +129,10 @@ function Flyout:ApplyLayout()
 		tile:SetPoint("TOPLEFT", self.grid, "TOPLEFT",
 			col * (size + spacing), -row * (size + spacing))
 
-		Widgets:HostInTile(tile, record.frame)
-		record.frame:Show()
+		-- Hosting touches a foreign button; never let one bad frame break layout.
+		if pcall(Widgets.HostInTile, Widgets, tile, record.frame) then
+			pcall(record.frame.Show, record.frame)
+		end
 	end
 
 	local gridW = cols * size + (cols - 1) * spacing

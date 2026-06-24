@@ -24,6 +24,7 @@ Collector.order = {}      -- ordered array of button names (tray order)
 Collector.byName = {}     -- name  -> record { name, frame, source, origin }
 Collector.byFrame = {}    -- frame -> record
 Collector.placing = false -- true while *we* anchor buttons (suppresses relock)
+Collector.failures = {}   -- name  -> error string (surfaced via /halo scan)
 
 -- ─── Original-state capture (for lossless release) ───────────────────
 
@@ -147,6 +148,8 @@ function Collector:GetKnownNames()
 end
 
 --- Adopt anything new, release anything now ignored, then relayout.
+-- Every foreign-frame touch is wrapped in pcall so a single misbehaving button
+-- can never abort the whole pass (which would leave the rest on the minimap).
 function Collector:Rescan()
 	if not self.started then return end
 
@@ -157,16 +160,26 @@ function Collector:Rescan()
 	for name in pairs(self.byName) do
 		if self:IsIgnored(name) then toRelease[#toRelease + 1] = name end
 	end
-	for _, name in ipairs(toRelease) do self:Release(name) end
+	for _, name in ipairs(toRelease) do pcall(self.Release, self, name) end
 
 	-- Adopt anything newly detected and not opted out.
-	for name, info in pairs(Detector:Scan()) do
+	local ok, detected = pcall(function() return Detector:Scan() end)
+	if not ok then
+		self.failures["__scan"] = tostring(detected)
+		detected = {}
+	end
+	for name, info in pairs(detected) do
 		if not self:IsIgnored(name) and not self.byName[name] then
-			self:Adopt(name, info.frame, info.source)
+			local adopted, err = pcall(self.Adopt, self, name, info.frame, info.source)
+			if adopted then
+				self.failures[name] = nil
+			else
+				self.failures[name] = tostring(err)
+			end
 		end
 	end
 
-	ns.Flyout:ApplyLayout()
+	pcall(function() ns.Flyout:ApplyLayout() end)
 	if ns.Launcher then ns.Launcher:Refresh() end
 end
 
@@ -182,8 +195,9 @@ function Collector:Start()
 				if self.started and not self:IsIgnored(name) and not self.byName[name] then
 					local frame = LibDBIcon:GetMinimapButton(name)
 					if frame then
-						self:Adopt(name, frame, "libdbicon")
-						ns.Flyout:ApplyLayout()
+						local ok, err = pcall(self.Adopt, self, name, frame, "libdbicon")
+						if not ok then self.failures[name] = tostring(err) end
+						pcall(function() ns.Flyout:ApplyLayout() end)
 						if ns.Launcher then ns.Launcher:Refresh() end
 					end
 				end

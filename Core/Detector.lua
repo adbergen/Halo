@@ -186,5 +186,11 @@ function Detector:Dump()
 	end
 	lines[#lines + 1] = ("Collected in tray (%d): %s")
 		:format(#taken, #taken > 0 and table.concat(taken, ", ") or "(none)")
+
+	if ns.Collector and ns.Collector.failures then
+		for name, err in pairs(ns.Collector.failures) do
+			lines[#lines + 1] = ("|cffff5555adopt failed|r [%s]: %s"):format(name, err)
+		end
+	end
 	return lines
 end
