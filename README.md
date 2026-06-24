@@ -1,6 +1,8 @@
 <div align="center">
 
-# ✦ Halo
+<img src="logo.png" alt="Halo logo" width="180"/>
+
+# Halo
 
 **One ring to gather them all.**
 
