@@ -1,0 +1,28 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write # allow the packager to create a GitHub Release
+
+jobs:
+  release:
+    name: Package & publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so the packager can build the changelog
+
+      - name: Package and upload
+        uses: BigWigsMods/packager@master
+        env:
+          # Always available — creates the GitHub Release and attaches the zip.
+          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+          # Optional — set these repo secrets to also publish to the addon sites.
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          WOWI_API_TOKEN: ${{ secrets.WOWI_API_TOKEN }}
+          WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}

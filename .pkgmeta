@@ -1,0 +1,17 @@
+# BigWigs packager configuration — https://github.com/BigWigsMods/packager
+#
+# Libraries are committed under Libs/ so the addon runs straight from a clone,
+# therefore the packager should not fetch or create a no-lib build.
+package-as: Halo
+
+enable-no-lib-creation: no
+
+# Keep development-only files out of the published zip.
+ignore:
+  - Tests
+  - .github
+  - .editorconfig
+  - .gitignore
+  - .luacheckrc
+  - .pkgmeta
+  - CONTRIBUTING.md

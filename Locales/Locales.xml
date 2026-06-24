@@ -1,0 +1,4 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+	<!-- enUS is the default/fallback locale and must load first. -->
+	<Script file="enUS.lua"/>
+</Ui>
