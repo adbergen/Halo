@@ -38,7 +38,10 @@ end
 function Widgets:HostInTile(tile, button)
 	button:SetParent(tile)
 	button:ClearAllPoints()
-	button:SetPoint("CENTER", tile, "CENTER", 0, 0)
+	-- The collector blocks the button's normal SetPoint (so LibDBIcon can't pull
+	-- it back to the minimap); position it through the saved original instead.
+	local setPoint = button.haloSetPoint or button.SetPoint
+	setPoint(button, "CENTER", tile, "CENTER", 0, 0)
 	-- LibDBIcon buttons live at MEDIUM strata; lift them to the tray's strata so
 	-- they render in front of the panel background instead of hidden behind it.
 	button:SetFrameStrata(tile:GetFrameStrata())

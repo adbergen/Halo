@@ -4,11 +4,15 @@
 	keeping it pinned inside the tray, and releasing it back when the user opts
 	a button out (or disables Halo).
 
-	Safety rules:
-	  • Only ever touch non-secure, non-forbidden frames (minimap buttons are).
-	  • Remember each button's original parent + anchors so release is lossless.
-	  • Re-assert our layout if an addon tries to move "its" button afterwards,
-	    using a `placing` guard so our own anchoring never recurses.
+	The tricky part is that LibDBIcon actively re-anchors its buttons to the
+	minimap edge (its updatePosition calls button:SetPoint). To win that fight
+	for good, Halo takes over each adopted button's SetPoint — replacing it with
+	a no-op so nothing but Halo can move it — and positions buttons through the
+	saved original. Release restores the original SetPoint.
+
+	Safety: only ever touch non-secure, non-forbidden frames (minimap buttons
+	are), and remember each button's original parent + anchors so release is
+	lossless.
 ]]
 
 local _, ns = ...
@@ -23,7 +27,9 @@ Collector.started = false
 Collector.order = {}      -- ordered array of button names (tray order)
 Collector.byName = {}     -- name  -> record { name, frame, source, origin }
 Collector.byFrame = {}    -- frame -> record
-Collector.placing = false -- true while *we* anchor buttons (suppresses relock)
+Collector.placing = false -- reserved for layout coordination
+
+local function blockedSetPoint() end -- installed on adopted buttons
 
 -- ─── Original-state capture (for lossless release) ───────────────────
 
@@ -49,22 +55,6 @@ local function restoreAnchors(frame, origin)
 	if origin.scale then frame:SetScale(origin.scale) end
 end
 
--- ─── Re-lock: bounce buttons back into the tray if an addon moves them ─
-
-local function queueRelayout()
-	if Collector.relayoutQueued then return end
-	Collector.relayoutQueued = true
-	C_Timer.After(0, function()
-		Collector.relayoutQueued = false
-		ns.Flyout:ApplyLayout()
-	end)
-end
-
-local function onExternalSetPoint(frame)
-	if Collector.placing then return end           -- our own anchoring, ignore
-	if Collector.byFrame[frame] then queueRelayout() end
-end
-
 -- ─── Adoption ────────────────────────────────────────────────────────
 
 function Collector:IsIgnored(name)
@@ -82,12 +72,14 @@ function Collector:Adopt(name, frame, source)
 		origin = snapshotAnchors(frame),
 	}
 
-	frame:SetParent(ns.Flyout.grid)   -- off the minimap immediately
+	frame:SetParent(ns.Flyout.grid) -- off the minimap immediately
 	frame:SetScale(1)
 
-	if not record.hooked then
-		hooksecurefunc(frame, "SetPoint", function() onExternalSetPoint(frame) end)
-		record.hooked = true
+	-- Take sole authority over this button's position. LibDBIcon (and others)
+	-- can call SetPoint all they like; it will do nothing until release.
+	if not frame.haloSetPoint then
+		frame.haloSetPoint = frame.SetPoint
+		frame.SetPoint = blockedSetPoint
 	end
 
 	self.byName[name] = record
@@ -99,7 +91,13 @@ function Collector:Release(name)
 	local record = self.byName[name]
 	if not record then return end
 
+	-- Hand positioning back before restoring the original anchors.
+	if record.frame.haloSetPoint then
+		record.frame.SetPoint = record.frame.haloSetPoint
+		record.frame.haloSetPoint = nil
+	end
 	restoreAnchors(record.frame, record.origin)
+
 	self.byName[name] = nil
 	self.byFrame[record.frame] = nil
 	for i, n in ipairs(self.order) do
@@ -133,7 +131,7 @@ function Collector:Count()
 	return #self.order
 end
 
---- Every button name we know about (collected or ignored) — for the options list.
+--- Every button name we know about (collected or detected) — for the options list.
 function Collector:GetKnownNames()
 	local names, seen = {}, {}
 	for name in pairs(self.byName) do
@@ -151,8 +149,6 @@ function Collector:Rescan()
 	if not self.started then return end
 
 	-- Release collected buttons the user now wants back on the minimap.
-	-- (Adopted buttons live off the minimap, so the detector can't re-find
-	-- them — we must walk our own records to honor a fresh ignore.)
 	local toRelease = {}
 	for name in pairs(self.byName) do
 		if self:IsIgnored(name) then toRelease[#toRelease + 1] = name end
