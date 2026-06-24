@@ -177,6 +177,7 @@ function Collector:Start()
 	-- Catch buttons that register after login (the common case).
 	if LibDBIcon then
 		hooksecurefunc(LibDBIcon, "Register", function(_, name)
+			if name == ns.ADDON then return end -- never collect our own launcher
 			C_Timer.After(0, function()
 				if self.started and not self:IsIgnored(name) and not self.byName[name] then
 					local frame = LibDBIcon:GetMinimapButton(name)

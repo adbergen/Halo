@@ -55,7 +55,12 @@ print("[4/7] PLAYER_ENTERING_WORLD handled")
 
 local collected = ns.Collector:Count()
 assert(collected >= 2, "expected >= 2 collected buttons, got " .. collected)
-print("[5/7] collected " .. collected .. " buttons")
+
+-- The launcher must never collect itself, or there is nothing left to click.
+assert(ns.Collector.byName["Halo"] == nil, "the launcher collected its own button!")
+local launcher = ns.Launcher:GetButton()
+assert(launcher and launcher:GetParent() == Minimap, "launcher should remain on the minimap")
+print("[5/7] collected " .. collected .. " buttons; launcher stays on the minimap")
 
 -- Tray open/close + every slash branch.
 ns.Flyout:Toggle(); ns.Flyout:Toggle()

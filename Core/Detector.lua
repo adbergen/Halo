@@ -84,8 +84,10 @@ function Detector:GetLibDBIconButtons()
 	local found = {}
 	if not LibDBIcon then return found end
 	for _, name in ipairs(LibDBIcon:GetButtonList()) do
-		local button = LibDBIcon:GetMinimapButton(name)
-		if button then found[name] = button end
+		if name ~= ns.ADDON then -- never collect Halo's own launcher
+			local button = LibDBIcon:GetMinimapButton(name)
+			if button then found[name] = button end
+		end
 	end
 	return found
 end

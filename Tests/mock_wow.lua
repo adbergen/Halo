@@ -168,14 +168,27 @@ local fakeAceDB = {
 	end,
 }
 
+-- Stateful enough to reproduce real behavior: registering a launcher creates a
+-- minimap button and exposes it through GetButtonList/GetMinimapButton, so the
+-- test catches the addon collecting its own launcher.
+local registered = {}
 local fakeLibDBIcon = {
-	Register = function() end,
+	Register = function(_, name)
+		local b = CreateFrame("Button", "LibDBIcon10_" .. name, Minimap)
+		b:SetSize(31, 31)
+		registered[name] = b
+		return b
+	end,
 	Hide = function() end,
 	Show = function() end,
 	Refresh = function() end,
-	IsRegistered = function() return false end,
-	GetButtonList = function() return {} end,
-	GetMinimapButton = function() return nil end,
+	IsRegistered = function(_, name) return registered[name] ~= nil end,
+	GetButtonList = function()
+		local t = {}
+		for n in pairs(registered) do t[#t + 1] = n end
+		return t
+	end,
+	GetMinimapButton = function(_, name) return registered[name] end,
 }
 
 local fakeLDB = {
