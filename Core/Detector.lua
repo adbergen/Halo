@@ -179,5 +179,12 @@ function Detector:Dump()
 	for n in pairs(self:GetLibDBIconButtons()) do ldb[#ldb + 1] = n end
 	table.sort(ldb)
 	lines[#lines + 1] = "LibDBIcon buttons: " .. (#ldb > 0 and table.concat(ldb, ", ") or "(none)")
+
+	local taken = {}
+	if ns.Collector then
+		for _, record in ipairs(ns.Collector:GetButtons()) do taken[#taken + 1] = record.name end
+	end
+	lines[#lines + 1] = ("Collected in tray (%d): %s")
+		:format(#taken, #taken > 0 and table.concat(taken, ", ") or "(none)")
 	return lines
 end

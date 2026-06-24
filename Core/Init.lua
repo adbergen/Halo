@@ -57,16 +57,27 @@ function ns:Refresh()
 	if ns.Collector then ns.Collector:Rescan() end
 end
 
+-- Run one init step in isolation so a failure in (say) button detection can
+-- never take down the launcher or the /halo command.
+local function step(label, fn)
+	local ok, err = pcall(fn)
+	if not ok then
+		ns:Print("|cffff5555" .. label .. " error:|r " .. tostring(err))
+	end
+	return ok
+end
+
 local function onLogin()
 	ns.db = AceDB:New("HaloDB", ns.defaults, true)
 
-	-- Order matters: the tray frame must exist before the collector reparents
-	-- buttons into it, and the launcher before the collector counts buttons.
-	ns.Theme:Init()
-	ns.Flyout:Create()
-	ns.Launcher:Create()
-	ns.Collector:Start()
-	ns.Options:Setup()
+	-- The tray must exist before the collector reparents buttons into it. The
+	-- launcher and options (slash command) are set up before the collector so
+	-- /halo always works, even if detection hits an error.
+	step("theme", function() ns.Theme:Init() end)
+	step("tray", function() ns.Flyout:Create() end)
+	step("launcher", function() ns.Launcher:Create() end)
+	step("options", function() ns.Options:Setup() end)
+	step("collector", function() ns.Collector:Start() end)
 
 	for _, event in ipairs({ "OnProfileChanged", "OnProfileCopied", "OnProfileReset" }) do
 		ns.db.RegisterCallback(ns, event, "Refresh")
