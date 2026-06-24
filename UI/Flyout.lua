@@ -109,36 +109,39 @@ function Flyout:ApplyLayout()
 	local cols = math.max(1, math.min(p.columns, math.max(count, 1)))
 	local rows = math.max(1, math.ceil(math.max(count, 1) / cols))
 
-	ns.Collector.placing = true
-
 	-- Hide unused pooled tiles up front.
 	for i = count + 1, #self.tiles do self.tiles[i]:Hide() end
 
+	local hosted = 0
 	for index, record in ipairs(buttons) do
-		local tile = self.tiles[index]
-		if not tile then
-			tile = Widgets:Tile(self.grid, size)
-			self.tiles[index] = tile
-		end
-		tile:SetSize(size, size)
-		tile:Show()
+		-- The ENTIRE per-button body (tile creation included) is isolated, so a
+		-- failure on any one button can never abort the rest of the layout.
+		local ok, err = pcall(function()
+			local tile = self.tiles[index]
+			if not tile then
+				tile = Widgets:Tile(self.grid, size)
+				self.tiles[index] = tile
+			end
+			tile:SetSize(size, size)
+			tile:Show()
 
-		local col = (index - 1) % cols
-		local row = math.floor((index - 1) / cols)
-		tile:ClearAllPoints()
-		tile:SetPoint("TOPLEFT", self.grid, "TOPLEFT",
-			col * (size + spacing), -row * (size + spacing))
+			local col = (index - 1) % cols
+			local row = math.floor((index - 1) / cols)
+			tile:ClearAllPoints()
+			tile:SetPoint("TOPLEFT", self.grid, "TOPLEFT",
+				col * (size + spacing), -row * (size + spacing))
 
-		-- Host each button independently: one frame that refuses to anchor must
-		-- not abort the whole layout (which would leave the rest un-hosted).
-		local ok, err = pcall(Widgets.HostInTile, Widgets, tile, record.frame)
+			Widgets:HostInTile(tile, record.frame)
+			record.frame:Show()
+		end)
 		if ok then
-			pcall(record.frame.Show, record.frame)
+			hosted = hosted + 1
 			ns.Collector.failures[record.name] = nil
 		else
 			ns.Collector.failures[record.name] = tostring(err)
 		end
 	end
+	self.lastHosted = hosted
 
 	local gridW = cols * size + (cols - 1) * spacing
 	local gridH = rows * size + (rows - 1) * spacing
@@ -148,7 +151,6 @@ function Flyout:ApplyLayout()
 	Theme:SetPanelOpacity(self.panel, p.trayOpacity)
 
 	self.emptyLabel:SetShown(count == 0)
-	ns.Collector.placing = false
 
 	self:Anchor()
 end

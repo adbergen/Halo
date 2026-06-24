@@ -147,7 +147,9 @@ end
 
 --- Diagnostic: report each collected button's actual render state.
 function Collector:Dump()
-	local lines = { ("|cff66b3ffHalo|r collected %d:"):format(self:Count()) }
+	local hosted = (ns.Flyout and ns.Flyout.lastHosted) or -1
+	local lines = { ("|cff66b3ffHalo|r [v3] collected %d, last layout hosted %d:")
+		:format(self:Count(), hosted) }
 	for _, record in ipairs(self:GetButtons()) do
 		local b = record.frame
 		local parent = b:GetParent()
