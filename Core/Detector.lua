@@ -72,39 +72,26 @@ local function isBlizzard(name)
 end
 Detector.isBlizzard = isBlizzard -- exposed for the /halo scan diagnostic
 
---- Does this frame (or one of its regions) actually display an icon texture?
-local function hasIconTexture(frame)
-	if not frame.GetRegions then return false end
-	for _, region in ipairs({ frame:GetRegions() }) do
-		if region.GetObjectType and region:IsObjectType("Texture")
-			and region.GetTexture and region:GetTexture() then
-			return true
-		end
-	end
-	return false
-end
-
 --- Heuristic: does this look like a third-party minimap button?
+-- Deliberately permissive: it is better to collect a stray frame the user can
+-- opt out of (via /halo config) than to miss real buttons. Blizzard's own
+-- frames are filtered out by name in isBlizzard().
 function Detector:IsLegacyCandidate(frame)
 	if type(frame) ~= "table" or not frame.GetObjectType then return false end
-	local objType = frame:GetObjectType()
-	if objType ~= "Button" and objType ~= "Frame" then return false end
+	if frame:IsObjectType("Texture") or frame:IsObjectType("FontString") then return false end
 
 	local name = frame.GetName and frame:GetName()
 	if not name then return false end                 -- anonymous frames are unaddressable
 	if isBlizzard(name) then return false end
 	if self:IsLibDBIconButton(frame) then return false end -- handled by the clean path
 
-	-- It must be something the player can actually click.
-	if frame.IsMouseEnabled and not frame:IsMouseEnabled() then return false end
-
-	-- Real minimap buttons are small and square-ish.
+	-- Minimap buttons are small and square-ish.
 	local w, h = frame:GetWidth(), frame:GetHeight()
-	if not w or not h or w < 16 or w > 44 or h < 16 or h > 44 then return false end
+	if not w or not h or w < 12 or w > 48 or h < 12 or h > 48 then return false end
 
-	-- Buttons carry their own art; a bare Frame must prove it shows an icon so we
-	-- don't grab invisible/decorative overlays.
-	return objType == "Button" or hasIconTexture(frame)
+	-- A Button brings its own art; a plain Frame must at least carry some region.
+	local hasRegions = frame.GetNumRegions and frame:GetNumRegions() > 0
+	return (frame:IsObjectType("Button") or hasRegions) and true or false
 end
 
 --- All currently-registered LibDBIcon buttons as { name = frame } pairs.
