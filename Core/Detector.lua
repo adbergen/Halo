@@ -24,19 +24,27 @@ local BLIZZARD = {
 	MiniMapTracking = true, MiniMapTrackingButton = true, MiniMapTrackingFrame = true,
 	MiniMapMailFrame = true, MiniMapMailIcon = true,
 	MiniMapBattlefieldFrame = true, MiniMapWorldMapButton = true,
-	MiniMapLFGFrame = true, MiniMapInstanceDifficulty = true,
+	MiniMapLFGFrame = true, LFGMinimapFrame = true, LFGMinimapFrameBorder = true,
+	MiniMapInstanceDifficulty = true, MiniMapInstanceDifficultyText = true,
 	GuildInstanceDifficulty = true, MiniMapChallengeMode = true,
-	GameTimeFrame = true, TimeManagerClockButton = true,
+	GameTimeFrame = true, TimeManagerClockButton = true, CalendarButtonFrame = true,
 	QueueStatusMinimapButton = true, QueueStatusButton = true,
-	MinimapZoomIn = true, MinimapZoomOut = true,
+	MinimapZoomIn = true, MinimapZoomOut = true, BattlefieldMinimap = true,
 	MinimapZoneTextButton = true, MinimapBackdrop = true, MinimapCluster = true,
 	MinimapNorthTag = true, MiniMapVoiceChatFrame = true,
+	HelpOpenTicketButton = true, HelpOpenWebTicketButton = true,
 	ExpansionLandingPageMinimapButton = true, GarrisonLandingPageMinimapButton = true,
 	MinimapCompassTexture = true, Minimap = true,
 }
 
 -- Name prefixes that mark a Blizzard/system frame regardless of suffix.
-local BLIZZARD_PREFIX = { "MiniMap", "Minimap" }
+local BLIZZARD_PREFIX = {
+	"MiniMap", "Minimap", "LFG", "QueueStatus", "GameTime", "TimeManager",
+	"Calendar", "Garrison", "ExpansionLandingPage", "BattlefieldMinimap",
+}
+
+-- Substrings that almost always mark a Blizzard/system frame.
+local BLIZZARD_PATTERN = { "Difficulty", "VoiceChat", "PvPTimer" }
 
 -- A LibDBIcon button is named like "LibDBIcon10_Questie".
 local LIBDBICON_PREFIX = "LibDBIcon10_"
@@ -57,26 +65,46 @@ local function isBlizzard(name)
 	for _, prefix in ipairs(BLIZZARD_PREFIX) do
 		if startsWith(name, prefix) then return true end
 	end
+	for _, pattern in ipairs(BLIZZARD_PATTERN) do
+		if name:find(pattern) then return true end
+	end
+	return false
+end
+Detector.isBlizzard = isBlizzard -- exposed for the /halo scan diagnostic
+
+--- Does this frame (or one of its regions) actually display an icon texture?
+local function hasIconTexture(frame)
+	if not frame.GetRegions then return false end
+	for _, region in ipairs({ frame:GetRegions() }) do
+		if region.GetObjectType and region:IsObjectType("Texture")
+			and region.GetTexture and region:GetTexture() then
+			return true
+		end
+	end
 	return false
 end
 
 --- Heuristic: does this look like a third-party minimap button?
 function Detector:IsLegacyCandidate(frame)
 	if type(frame) ~= "table" or not frame.GetObjectType then return false end
-	if frame:IsObjectType("Texture") or frame:IsObjectType("FontString") then return false end
+	local objType = frame:GetObjectType()
+	if objType ~= "Button" and objType ~= "Frame" then return false end
 
 	local name = frame.GetName and frame:GetName()
 	if not name then return false end                 -- anonymous frames are unaddressable
 	if isBlizzard(name) then return false end
 	if self:IsLibDBIconButton(frame) then return false end -- handled by the clean path
 
-	-- Real minimap buttons are small, square-ish, and carry an icon texture.
-	local w, h = frame:GetWidth(), frame:GetHeight()
-	if not w or not h or w < 12 or w > 48 or h < 12 or h > 48 then return false end
+	-- It must be something the player can actually click.
+	if frame.IsMouseEnabled and not frame:IsMouseEnabled() then return false end
 
-	local hasTexture = (frame.GetNumRegions and frame:GetNumRegions() > 0)
-		or frame:IsObjectType("Button")
-	return hasTexture and true or false
+	-- Real minimap buttons are small and square-ish.
+	local w, h = frame:GetWidth(), frame:GetHeight()
+	if not w or not h or w < 16 or w > 44 or h < 16 or h > 44 then return false end
+
+	-- Buttons carry their own art; a bare Frame must prove it shows an icon so we
+	-- don't grab invisible/decorative overlays.
+	return objType == "Button" or hasIconTexture(frame)
 end
 
 --- All currently-registered LibDBIcon buttons as { name = frame } pairs.
@@ -121,4 +149,37 @@ function Detector:Scan()
 		end
 	end
 	return result
+end
+
+--- Human-readable report of every minimap child and why we did/didn't take it.
+-- Surfaced via `/halo scan` to diagnose missing or false-positive buttons.
+function Detector:Dump()
+	local lines = { "|cff66b3ffHalo|r minimap scan:" }
+	for _, parent in ipairs({ Minimap, _G.MinimapBackdrop }) do
+		if parent and parent.GetChildren then
+			for _, child in ipairs({ parent:GetChildren() }) do
+				local name = (child.GetName and child:GetName()) or "<anonymous>"
+				local objType = (child.GetObjectType and child:GetObjectType()) or "?"
+				local w = (child.GetWidth and math.floor((child:GetWidth() or 0) + 0.5)) or 0
+				local mouse = child.IsMouseEnabled and child:IsMouseEnabled()
+				local verdict
+				if self:IsLibDBIconButton(child) then
+					verdict = "|cff66b3ffLibDBIcon|r"
+				elseif name ~= "<anonymous>" and isBlizzard(name) then
+					verdict = "|cff999999Blizzard (skip)|r"
+				elseif self:IsLegacyCandidate(child) then
+					verdict = "|cff66ff66legacy (take)|r"
+				else
+					verdict = "|cffff6666ignored|r"
+				end
+				lines[#lines + 1] = ("  %s [%s] w=%d mouse=%s → %s")
+					:format(name, objType, w, tostring(mouse and true or false), verdict)
+			end
+		end
+	end
+	local ldb = {}
+	for n in pairs(self:GetLibDBIconButtons()) do ldb[#ldb + 1] = n end
+	table.sort(ldb)
+	lines[#lines + 1] = "LibDBIcon buttons: " .. (#ldb > 0 and table.concat(ldb, ", ") or "(none)")
+	return lines
 end

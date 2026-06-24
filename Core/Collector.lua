@@ -192,4 +192,14 @@ function Collector:Start()
 	end
 
 	self:Rescan()
+
+	-- Addons create their buttons at staggered times after login, so sweep
+	-- repeatedly for the first ~30 seconds to catch the late arrivals.
+	local sweeps = 0
+	local function sweep()
+		sweeps = sweeps + 1
+		self:Rescan()
+		if sweeps < 12 then C_Timer.After(2.5, sweep) end
+	end
+	C_Timer.After(2, sweep)
 end

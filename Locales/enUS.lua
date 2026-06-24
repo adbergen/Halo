@@ -35,6 +35,7 @@ L["/halo config"] = "/halo config"
 L["open the settings panel"] = "open the settings panel"
 L["/halo reset"] = "/halo reset"
 L["reset all settings to defaults"] = "reset all settings to defaults"
+L["list minimap buttons (diagnostic)"] = "list minimap buttons (diagnostic)"
 L["Settings reset to defaults."] = "Settings reset to defaults."
 
 -- Options panel

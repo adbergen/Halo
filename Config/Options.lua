@@ -189,10 +189,13 @@ function Options:RegisterSlash()
 			ns.db:ResetProfile()
 			self:RefreshControls()
 			ns:Print(L["Settings reset to defaults."])
+		elseif msg == "scan" then
+			for _, line in ipairs(ns.Detector:Dump()) do print(line) end
 		elseif msg == "help" then
 			ns:Print(L["Commands:"])
 			ns:Print("|cff66b3ff/halo|r — " .. L["toggle the button tray"])
 			ns:Print("|cff66b3ff/halo config|r — " .. L["open the settings panel"])
+			ns:Print("|cff66b3ff/halo scan|r — " .. L["list minimap buttons (diagnostic)"])
 			ns:Print("|cff66b3ff/halo reset|r — " .. L["reset all settings to defaults"])
 		else
 			ns.Flyout:Toggle()
