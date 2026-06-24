@@ -6,6 +6,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- Tray now sits at DIALOG strata so quest-tracker text (Questie, etc.) and other
+  MEDIUM-strata UI no longer bleed through the panel; collected buttons are
+  raised to match so they still render above the tray background.
+
 ## [1.1.0] - 2026-06-24
 
 ### Added

@@ -35,7 +35,10 @@ function Flyout:Create()
 	if self.panel then return end
 
 	local panel = CreateFrame("Frame", "HaloTray", UIParent)
-	panel:SetFrameStrata("MEDIUM")
+	-- DIALOG keeps the tray above quest trackers and other MEDIUM-strata UI so
+	-- their text can't bleed through. HostInTile unlocks each collected button's
+	-- fixed strata and raises it to match, so buttons still sit above the panel.
+	panel:SetFrameStrata("DIALOG")
 	panel:SetClampedToScreen(true)
 	panel:EnableMouse(true)
 	panel:Hide()
