@@ -186,6 +186,7 @@ function Flyout:EnsureTile(record, size)
 	end
 	tile:SetSize(size, size)
 	tile:Show()
+	tile:SetAlpha(1)
 	local ok, err = pcall(Widgets.HostInTile, Widgets, tile, record.frame)
 	if not ok then
 		ns.Collector.failures[record.name] = tostring(err)
@@ -388,7 +389,9 @@ function Flyout:BeginDrag(name)
 	end
 
 	local size = ns.db.profile.tileSize
-	tile:Hide() -- the ghost stands in for the real tile while dragging
+	-- Make the real tile invisible but keep it SHOWN, so the button still
+	-- receives OnDragStop (Hide() would swallow it and the drag would never end).
+	tile:SetAlpha(0)
 
 	-- Populate and lift the ghost.
 	local ghost = self.ghost
@@ -427,6 +430,7 @@ end
 function Flyout:EndDrag()
 	local record = self.dragging
 	if not record then return end
+	local tile = record.frame.haloTile
 	local ghost = self.ghost
 	ghost:SetScript("OnUpdate", nil)
 	ns.Animation.Cancel("halo_lift")
@@ -444,6 +448,7 @@ function Flyout:EndDrag()
 	self.dragging, self.dragSeq, self.dragHover, self.dragVisible = nil, nil, nil, nil
 
 	local function finish()
+		if tile then tile:SetAlpha(1) end
 		ghost:Hide()
 		ghost:SetSize(size, size)
 		ghost:SetAlpha(0.95)

@@ -91,6 +91,9 @@ function Collector:Adopt(name, frame, source)
 		if frame.RegisterForDrag then frame:RegisterForDrag("LeftButton") end
 		frame:HookScript("OnDragStart", function() ns.Flyout:BeginDrag(name) end)
 		frame:HookScript("OnDragStop", function() ns.Flyout:EndDrag() end)
+		-- Fallback: EndDrag is idempotent, so also end on mouse-up in case a
+		-- particular button doesn't fire OnDragStop reliably.
+		frame:HookScript("OnMouseUp", function() ns.Flyout:EndDrag() end)
 	end
 
 	self.byName[name] = record
