@@ -30,6 +30,9 @@ ns.defaults = {
 		tileSize = 32,
 		spacing  = 6,
 
+		-- Layout mode: "grid" | "radial"
+		layout = "grid",
+
 		-- Behavior
 		openOnHover = false,
 		autoHide    = true,

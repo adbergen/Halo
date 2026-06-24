@@ -1,13 +1,12 @@
 --[[ Halo — UI/Flyout.lua
 
-	The tray: a flat dark panel that fades/scales in from the launcher and lays
-	the collected buttons out in a reflowing grid. It anchors itself to whatever
-	side of the screen the launcher lives on so it always opens inward, and can
-	auto-hide when the cursor leaves.
+	The tray: a flat dark panel that fades/scales in from the launcher. It lays
+	the collected buttons out either as a reflowing grid or as a ring (radial
+	mode, where the panel background hides so buttons appear to orbit the
+	launcher). A search box appears once enough buttons are collected.
 
-	`ApplyLayout` is the single place that anchors collected buttons. It raises
-	`Collector.placing` while it works so the per-button SetPoint guard doesn't
-	mistake our own anchoring for an addon fighting back.
+	The panel sits at MEDIUM strata to match LibDBIcon's buttons, and each button
+	is hosted independently so one bad frame can't abort the whole layout.
 ]]
 
 local _, ns = ...
@@ -18,7 +17,9 @@ local Flyout = {}
 ns.Flyout = Flyout
 
 local PADDING = 10
-local GAP = 8 -- gap between launcher and panel
+local GAP = 8           -- gap between launcher and panel
+local SEARCH_H = 22     -- search box height
+local SEARCH_THRESHOLD = 10 -- show search once this many buttons are collected
 
 Flyout.tiles = {}
 Flyout.isOpen = false
@@ -29,9 +30,8 @@ function Flyout:Create()
 	if self.panel then return end
 
 	local panel = CreateFrame("Frame", "HaloTray", UIParent)
-	-- MEDIUM matches the strata LibDBIcon locks its buttons to, so collected
-	-- buttons render above the panel background (as its children) regardless of
-	-- LibDBIcon's SetFixedFrameStrata lock.
+	-- MEDIUM matches LibDBIcon's locked button strata so buttons render above
+	-- the panel background (as its children).
 	panel:SetFrameStrata("MEDIUM")
 	panel:SetClampedToScreen(true)
 	panel:EnableMouse(true)
@@ -41,8 +41,14 @@ function Flyout:Create()
 	self.panel = panel
 
 	local grid = CreateFrame("Frame", nil, panel)
-	grid:SetPoint("TOPLEFT", PADDING, -PADDING)
 	self.grid = grid
+
+	local search = Widgets:EditBox(panel, 120, ns.L["Search"], function(text)
+		self.searchText = text
+		self:ApplyLayout()
+	end)
+	search:Hide()
+	self.search = search
 
 	local empty = panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	empty:SetPoint("CENTER")
@@ -61,9 +67,9 @@ function Flyout:SetupAnimations()
 		local s = group:CreateAnimation("Scale")
 		s:SetDuration(0.16)
 		s:SetSmoothing("OUT")
-		if s.SetScaleFrom then -- modern API
+		if s.SetScaleFrom then
 			s:SetScaleFrom(from, from); s:SetScaleTo(to, to)
-		elseif s.SetFromScale then -- legacy API
+		elseif s.SetFromScale then
 			s:SetFromScale(from, from); s:SetToScale(to, to)
 		end
 		if s.SetOrigin then s:SetOrigin("CENTER", 0, 0) end
@@ -78,9 +84,7 @@ function Flyout:SetupAnimations()
 	self.animOut = panel:CreateAnimationGroup()
 	local fadeOut = self.animOut:CreateAnimation("Alpha")
 	fadeOut:SetFromAlpha(1); fadeOut:SetToAlpha(0); fadeOut:SetDuration(0.12); fadeOut:SetSmoothing("IN")
-	self.animOut:SetScript("OnFinished", function()
-		panel:Hide(); panel:SetAlpha(1)
-	end)
+	self.animOut:SetScript("OnFinished", function() panel:Hide(); panel:SetAlpha(1) end)
 end
 
 function Flyout:SetupAutoHide()
@@ -88,7 +92,9 @@ function Flyout:SetupAutoHide()
 	panel:SetScript("OnUpdate", function(_, dt)
 		if not (self.isOpen and ns.db.profile.autoHide) then return end
 		local launcher = ns.Launcher and ns.Launcher:GetButton()
-		if MouseIsOver(panel) or (launcher and MouseIsOver(launcher)) then
+		local editBox = self.search and self.search.editBox
+		if MouseIsOver(panel) or (launcher and MouseIsOver(launcher))
+			or (editBox and editBox:HasFocus()) then
 			elapsed = 0
 			return
 		end
@@ -102,59 +108,108 @@ end
 
 -- ─── Layout ──────────────────────────────────────────────────────────
 
+--- Collected buttons honoring the search filter (when the search box is shown).
+function Flyout:GetVisibleButtons()
+	local all = ns.Collector:GetButtons()
+	local q = self.searchActive and self.searchText
+	if not q or q == "" then return all end
+	q = q:lower()
+	local out = {}
+	for _, record in ipairs(all) do
+		local label = record.name:gsub("^LibDBIcon10_", ""):lower()
+		if label:find(q, 1, true) then out[#out + 1] = record end
+	end
+	return out
+end
+
+--- Create/reuse tile #index, position it, and host the button. Returns success.
+function Flyout:HostAt(index, record, size, point, x, y)
+	local ok, err = pcall(function()
+		local tile = self.tiles[index]
+		if not tile then
+			tile = Widgets:Tile(self.grid, size)
+			self.tiles[index] = tile
+		end
+		tile:SetSize(size, size)
+		tile:Show()
+		tile:ClearAllPoints()
+		tile:SetPoint(point, self.grid, point, x, y)
+		Widgets:HostInTile(tile, record.frame)
+		record.frame:Show()
+	end)
+	if ok then
+		ns.Collector.failures[record.name] = nil
+		return true
+	end
+	ns.Collector.failures[record.name] = tostring(err)
+	return false
+end
+
 function Flyout:ApplyLayout()
 	if not self.grid then return end
 
 	local p = ns.db.profile
-	local buttons = ns.Collector:GetButtons()
+	local total = ns.Collector:Count()
+	local radial = (p.layout == "radial")
+
+	-- Search box only in grid mode, and only when there are enough buttons.
+	self.searchActive = (not radial) and total >= SEARCH_THRESHOLD
+	self.search:SetShown(self.searchActive)
+
+	local buttons = self:GetVisibleButtons()
 	local count = #buttons
 	local size, spacing = p.tileSize, p.spacing
-	local cols = math.max(1, math.min(p.columns, math.max(count, 1)))
-	local rows = math.max(1, math.ceil(math.max(count, 1) / cols))
 
-	-- Hide unused pooled tiles up front.
 	for i = count + 1, #self.tiles do self.tiles[i]:Hide() end
 
 	local hosted = 0
-	for index, record in ipairs(buttons) do
-		-- The ENTIRE per-button body (tile creation included) is isolated, so a
-		-- failure on any one button can never abort the rest of the layout.
-		local ok, err = pcall(function()
-			local tile = self.tiles[index]
-			if not tile then
-				tile = Widgets:Tile(self.grid, size)
-				self.tiles[index] = tile
+	if radial and count > 1 then
+		-- Ring of buttons around the panel centre; background hidden.
+		local step = (2 * math.pi) / count
+		local radius = math.max(size, (count * (size + spacing)) / (2 * math.pi))
+		for index, record in ipairs(buttons) do
+			local angle = -math.pi / 2 + (index - 1) * step
+			if self:HostAt(index, record, size, "CENTER",
+				math.cos(angle) * radius, math.sin(angle) * radius) then
+				hosted = hosted + 1
 			end
-			tile:SetSize(size, size)
-			tile:Show()
-
+		end
+		local dim = (radius + size) * 2
+		self.grid:ClearAllPoints()
+		self.grid:SetPoint("CENTER", self.panel, "CENTER", 0, 0)
+		self.grid:SetSize(dim, dim)
+		self.panel:SetSize(dim + PADDING, dim + PADDING)
+		Theme:SetPanelOpacity(self.panel, 0)
+	else
+		local cols = math.max(1, math.min(p.columns, math.max(count, 1)))
+		local rows = math.max(1, math.ceil(math.max(count, 1) / cols))
+		for index, record in ipairs(buttons) do
 			local col = (index - 1) % cols
 			local row = math.floor((index - 1) / cols)
-			tile:ClearAllPoints()
-			tile:SetPoint("TOPLEFT", self.grid, "TOPLEFT",
-				col * (size + spacing), -row * (size + spacing))
+			if self:HostAt(index, record, size, "TOPLEFT",
+				col * (size + spacing), -row * (size + spacing)) then
+				hosted = hosted + 1
+			end
+		end
+		local searchOff = self.searchActive and (SEARCH_H + 6) or 0
+		local gridW = cols * size + (cols - 1) * spacing
+		local gridH = rows * size + (rows - 1) * spacing
+		self.grid:ClearAllPoints()
+		self.grid:SetPoint("TOPLEFT", self.panel, "TOPLEFT", PADDING, -PADDING - searchOff)
+		self.grid:SetSize(math.max(gridW, 1), math.max(gridH, 1))
+		self.panel:SetSize(gridW + PADDING * 2, gridH + PADDING * 2 + searchOff)
+		Theme:SetPanelOpacity(self.panel, p.trayOpacity)
 
-			Widgets:HostInTile(tile, record.frame)
-			record.frame:Show()
-		end)
-		if ok then
-			hosted = hosted + 1
-			ns.Collector.failures[record.name] = nil
-		else
-			ns.Collector.failures[record.name] = tostring(err)
+		if self.searchActive then
+			self.search:ClearAllPoints()
+			self.search:SetPoint("TOPLEFT", self.panel, "TOPLEFT", PADDING, -PADDING)
+			self.search:SetPoint("TOPRIGHT", self.panel, "TOPRIGHT", -PADDING, -PADDING)
 		end
 	end
 	self.lastHosted = hosted
 
-	local gridW = cols * size + (cols - 1) * spacing
-	local gridH = rows * size + (rows - 1) * spacing
-	self.grid:SetSize(math.max(gridW, 1), math.max(gridH, 1))
-	self.panel:SetSize(gridW + PADDING * 2, gridH + PADDING * 2)
 	self.panel:SetScale(p.trayScale)
-	Theme:SetPanelOpacity(self.panel, p.trayOpacity)
-
 	self.emptyLabel:SetShown(count == 0)
-
 	self:Anchor()
 end
 
@@ -173,10 +228,9 @@ function Flyout:Anchor()
 	local horiz = right and "RIGHT" or "LEFT"
 	local point = (top and "TOP" or "BOTTOM") .. horiz
 	local relPoint = (top and "BOTTOM" or "TOP") .. horiz
-	local yOff = top and -GAP or GAP
 
 	panel:ClearAllPoints()
-	panel:SetPoint(point, anchorTo, relPoint, 0, yOff)
+	panel:SetPoint(point, anchorTo, relPoint, 0, top and -GAP or GAP)
 end
 
 -- ─── Open / close ────────────────────────────────────────────────────
@@ -194,6 +248,7 @@ end
 function Flyout:Close()
 	if not self.isOpen then return end
 	self.isOpen = false
+	if self.search and self.search.editBox then self.search.editBox:ClearFocus() end
 	self.animIn:Stop()
 	self.animOut:Play()
 end

@@ -93,6 +93,14 @@ function Options:Setup()
 
 	-- Layout
 	stack(Widgets:Header(content, L["Layout"]), 8)
+	track_(stack(Widgets:Dropdown(content, 200,
+		function() return {
+			{ value = "grid", text = L["Grid"] },
+			{ value = "radial", text = L["Radial ring"] },
+		} end,
+		function() return profile().layout end,
+		function(v) profile().layout = v; ns:Refresh() end)),
+		function(c) c.Refresh() end)
 	track_(stack(Widgets:Slider(content, L["Columns"], 1, 10, 1,
 		function() return profile().columns end,
 		function(v) profile().columns = math.floor(v + 0.5); ns:Refresh() end)),

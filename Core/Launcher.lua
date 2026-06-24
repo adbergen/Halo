@@ -66,6 +66,14 @@ function Launcher:Create()
 
 	if LibDBIcon then
 		LibDBIcon:Register(ns.ADDON, self.dataObject, ns.db.profile.minimap)
+
+		-- Optional Masque skinning of the launcher button.
+		local Masque = LibStub("Masque", true)
+		local button = LibDBIcon:GetMinimapButton(ns.ADDON)
+		if Masque and button then
+			self.masque = Masque:Group("Halo", "Launcher")
+			self.masque:AddButton(button, { Icon = button.icon })
+		end
 	end
 end
 

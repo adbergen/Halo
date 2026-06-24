@@ -155,6 +155,117 @@ function Widgets:Slider(parent, labelText, minV, maxV, step, get, set)
 	return f
 end
 
+--- Dropdown. getOptions() -> { {value=, text=}, ... }; get()->value; set(value).
+function Widgets:Dropdown(parent, width, getOptions, get, set)
+	local dd = CreateFrame("Button", nil, parent)
+	dd:SetSize(width or 200, 24)
+	Theme:StylePanel(dd, { shadow = false, opacity = 1 })
+	dd.bg:SetColorTexture(unpack(color("bgRaised")))
+
+	local label = dd:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	label:SetPoint("LEFT", 8, 0)
+	label:SetPoint("RIGHT", -20, 0)
+	label:SetJustifyH("LEFT")
+	label:SetTextColor(unpack(color("text")))
+
+	local caret = dd:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	caret:SetPoint("RIGHT", -7, 0)
+	caret:SetText("\226\150\188") -- ▼
+	caret:SetTextColor(unpack(color("accent")))
+
+	local menu = CreateFrame("Frame", nil, dd)
+	menu:SetPoint("TOPLEFT", dd, "BOTTOMLEFT", 0, -2)
+	menu:SetPoint("TOPRIGHT", dd, "BOTTOMRIGHT", 0, -2)
+	menu:SetFrameStrata("DIALOG")
+	menu:SetFrameLevel(dd:GetFrameLevel() + 10)
+	Theme:StylePanel(menu, { shadow = true, opacity = 1 })
+	menu.bg:SetColorTexture(unpack(color("bg")))
+	menu:Hide()
+	dd.rows = {}
+
+	local function rebuild()
+		local opts = getOptions()
+		for i = #opts + 1, #dd.rows do dd.rows[i]:Hide() end
+		local yy = -4
+		for i, opt in ipairs(opts) do
+			local row = dd.rows[i]
+			if not row then
+				row = CreateFrame("Button", nil, menu)
+				row:SetHeight(22)
+				row.hl = row:CreateTexture(nil, "BACKGROUND")
+				row.hl:SetAllPoints()
+				row.hl:SetColorTexture(unpack(color("accentDim")))
+				row.hl:Hide()
+				row.text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+				row.text:SetPoint("LEFT", 8, 0)
+				row.text:SetTextColor(unpack(color("text")))
+				row:SetScript("OnEnter", function() row.hl:Show() end)
+				row:SetScript("OnLeave", function() row.hl:Hide() end)
+				dd.rows[i] = row
+			end
+			row:ClearAllPoints()
+			row:SetPoint("TOPLEFT", 0, yy)
+			row:SetPoint("TOPRIGHT", 0, yy)
+			row.text:SetText(opt.text)
+			row:SetScript("OnClick", function()
+				set(opt.value)
+				label:SetText(opt.text)
+				menu:Hide()
+			end)
+			row:Show()
+			yy = yy - 22
+		end
+		menu:SetHeight(math.max(-yy + 4, 8))
+	end
+
+	dd:SetScript("OnClick", function()
+		if menu:IsShown() then menu:Hide() else rebuild(); menu:Show() end
+	end)
+	dd:SetScript("OnEnter", function() dd.bg:SetColorTexture(unpack(color("bgHover"))) end)
+	dd:SetScript("OnLeave", function() dd.bg:SetColorTexture(unpack(color("bgRaised"))) end)
+
+	function dd.Refresh()
+		local current, opts = get(), getOptions()
+		for _, opt in ipairs(opts) do
+			if opt.value == current then label:SetText(opt.text) return end
+		end
+		label:SetText(tostring(current))
+	end
+	dd.Refresh()
+	return dd
+end
+
+--- Single-line edit box. onChanged(text) fires as the user types.
+function Widgets:EditBox(parent, width, placeholder, onChanged)
+	local f = CreateFrame("Frame", nil, parent)
+	f:SetSize(width or 200, 24)
+	Theme:StylePanel(f, { shadow = false, opacity = 1 })
+	f.bg:SetColorTexture(unpack(color("bgRaised")))
+
+	local eb = CreateFrame("EditBox", nil, f)
+	eb:SetPoint("LEFT", 8, 0)
+	eb:SetPoint("RIGHT", -8, 0)
+	eb:SetHeight(24)
+	eb:SetAutoFocus(false)
+	eb:SetFontObject("GameFontHighlightSmall")
+	eb:SetTextColor(unpack(color("text")))
+
+	local ph = eb:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	ph:SetPoint("LEFT", 1, 0)
+	ph:SetText(placeholder or "")
+	ph:SetTextColor(unpack(color("textDim")))
+
+	eb:SetScript("OnTextChanged", function(box)
+		ph:SetShown((box:GetText() or "") == "")
+		if onChanged then onChanged(box:GetText() or "") end
+	end)
+	eb:SetScript("OnEscapePressed", function(box) box:SetText(""); box:ClearFocus() end)
+	eb:SetScript("OnEnterPressed", function(box) box:ClearFocus() end)
+
+	f.editBox = eb
+	return f
+end
+
 --- Push button. Returns the clickable frame.
 function Widgets:Button(parent, text, onClick)
 	local f = CreateFrame("Button", nil, parent)
