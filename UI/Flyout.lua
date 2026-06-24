@@ -1,12 +1,16 @@
 --[[ Halo — UI/Flyout.lua
 
-	The tray: a flat dark panel that fades/scales in from the launcher. It lays
-	the collected buttons out either as a reflowing grid or as a ring (radial
-	mode, where the panel background hides so buttons appear to orbit the
-	launcher). A search box appears once enough buttons are collected.
+	The tray. A flat dark panel that fades/scales in from the launcher and lays
+	the collected buttons out as a reflowing grid (or a radial ring). A search
+	box appears once enough buttons are collected.
 
-	The panel sits at MEDIUM strata to match LibDBIcon's buttons, and each button
-	is hosted independently so one bad frame can't abort the whole layout.
+	Movement is animated: every tile eases toward a target position via a small
+	per-frame lerp driver, so reordering, column changes, and add/remove all
+	glide instead of snapping. Drag-to-reorder lifts a tile to follow the cursor
+	while the others shift to open a gap at the drop position.
+
+	The panel sits at MEDIUM strata to match LibDBIcon's locked buttons, and each
+	button is hosted independently so one bad frame can't abort the layout.
 ]]
 
 local _, ns = ...
@@ -17,11 +21,12 @@ local Flyout = {}
 ns.Flyout = Flyout
 
 local PADDING = 10
-local GAP = 8           -- gap between launcher and panel
-local SEARCH_H = 22     -- search box height
-local SEARCH_THRESHOLD = 10 -- show search once this many buttons are collected
+local GAP = 8
+local SEARCH_H = 22
+local SEARCH_THRESHOLD = 10
+local EASE = 0.30 -- per-frame interpolation toward target (higher = snappier)
 
-Flyout.tiles = {}
+Flyout.tilesByName = {} -- name -> tile (one persistent tile per button)
 Flyout.isOpen = false
 
 -- ─── Construction ────────────────────────────────────────────────────
@@ -30,8 +35,6 @@ function Flyout:Create()
 	if self.panel then return end
 
 	local panel = CreateFrame("Frame", "HaloTray", UIParent)
-	-- MEDIUM matches LibDBIcon's locked button strata so buttons render above
-	-- the panel background (as its children).
 	panel:SetFrameStrata("MEDIUM")
 	panel:SetClampedToScreen(true)
 	panel:EnableMouse(true)
@@ -45,7 +48,7 @@ function Flyout:Create()
 
 	local search = Widgets:EditBox(panel, 120, ns.L["Search"], function(text)
 		self.searchText = text
-		self:ApplyLayout()
+		self:ApplyLayout(true)
 	end)
 	search:Hide()
 	self.search = search
@@ -57,7 +60,7 @@ function Flyout:Create()
 	self.emptyLabel = empty
 
 	self:SetupAnimations()
-	self:SetupAutoHide()
+	self:SetupDriver()
 end
 
 function Flyout:SetupAnimations()
@@ -87,29 +90,48 @@ function Flyout:SetupAnimations()
 	self.animOut:SetScript("OnFinished", function() panel:Hide(); panel:SetAlpha(1) end)
 end
 
-function Flyout:SetupAutoHide()
-	local elapsed, panel = 0, self.panel
-	panel:SetScript("OnUpdate", function(_, dt)
+-- The panel's OnUpdate drives both tile easing and auto-hide.
+function Flyout:SetupDriver()
+	local elapsed = 0
+	self.panel:SetScript("OnUpdate", function(_, dt)
+		self:Drive()
+
 		if self.dragging then elapsed = 0; return end -- never auto-hide mid-drag
 		if not (self.isOpen and ns.db.profile.autoHide) then return end
 		local launcher = ns.Launcher and ns.Launcher:GetButton()
 		local editBox = self.search and self.search.editBox
-		if MouseIsOver(panel) or (launcher and MouseIsOver(launcher))
+		if MouseIsOver(self.panel) or (launcher and MouseIsOver(launcher))
 			or (editBox and editBox:HasFocus()) then
 			elapsed = 0
 			return
 		end
 		elapsed = elapsed + dt
-		if elapsed > 0.6 then
-			elapsed = 0
-			self:Close()
-		end
+		if elapsed > 0.6 then elapsed = 0; self:Close() end
 	end)
+end
+
+--- Ease every grid tile toward its target each frame (skips the dragged tile,
+--- which tracks the cursor, and radial mode, which positions directly).
+function Flyout:Drive()
+	if self.layoutMode ~= "grid" then return end
+	local dragTile = self.dragging and self.dragging.frame.haloTile
+	for _, tile in pairs(self.tilesByName) do
+		if tile ~= dragTile and tile.tx and tile:IsShown() then
+			local x = tile.x + (tile.tx - tile.x) * EASE
+			local y = tile.y + (tile.ty - tile.y) * EASE
+			if math.abs(tile.tx - x) < 0.5 then x = tile.tx end
+			if math.abs(tile.ty - y) < 0.5 then y = tile.ty end
+			if x ~= tile.x or y ~= tile.y then
+				tile.x, tile.y = x, y
+				tile:ClearAllPoints()
+				tile:SetPoint("TOPLEFT", self.grid, "TOPLEFT", x, y)
+			end
+		end
+	end
 end
 
 -- ─── Layout ──────────────────────────────────────────────────────────
 
---- Collected buttons honoring the search filter (when the search box is shown).
 function Flyout:GetVisibleButtons()
 	local all = ns.Collector:GetButtons()
 	local q = self.searchActive and self.searchText
@@ -123,37 +145,44 @@ function Flyout:GetVisibleButtons()
 	return out
 end
 
---- Create/reuse tile #index, position it, and host the button. Returns success.
-function Flyout:HostAt(index, record, size, point, x, y)
-	local ok, err = pcall(function()
-		local tile = self.tiles[index]
-		if not tile then
-			tile = Widgets:Tile(self.grid, size)
-			self.tiles[index] = tile
-		end
-		tile:SetSize(size, size)
-		tile:Show()
-		tile:ClearAllPoints()
-		tile:SetPoint(point, self.grid, point, x, y)
-		Widgets:HostInTile(tile, record.frame)
-		record.frame:Show()
-	end)
-	if ok then
-		ns.Collector.failures[record.name] = nil
-		return true
+--- Get/create this button's persistent tile and (re)host the button in it.
+function Flyout:EnsureTile(record, size)
+	local tile = self.tilesByName[record.name]
+	if not tile then
+		tile = Widgets:Tile(self.grid, size)
+		self.tilesByName[record.name] = tile
 	end
-	ns.Collector.failures[record.name] = tostring(err)
-	return false
+	tile:SetSize(size, size)
+	tile:Show()
+	local ok, err = pcall(Widgets.HostInTile, Widgets, tile, record.frame)
+	if not ok then
+		ns.Collector.failures[record.name] = tostring(err)
+		return nil
+	end
+	ns.Collector.failures[record.name] = nil
+	pcall(record.frame.Show, record.frame)
+	return tile
 end
 
-function Flyout:ApplyLayout()
+--- Set a grid tile's target. Snap (or first placement) jumps; otherwise the
+--- driver eases it there.
+function Flyout:Place(tile, tx, ty, snap)
+	tile.tx, tile.ty = tx, ty
+	if snap or not tile.x then
+		tile.x, tile.y = tx, ty
+		tile:ClearAllPoints()
+		tile:SetPoint("TOPLEFT", self.grid, "TOPLEFT", tx, ty)
+	end
+end
+
+function Flyout:ApplyLayout(snap)
 	if not self.grid then return end
 
 	local p = ns.db.profile
 	local total = ns.Collector:Count()
 	local radial = (p.layout == "radial")
+	self.layoutMode = radial and "radial" or "grid"
 
-	-- Search box only in grid mode, and only when there are enough buttons.
 	self.searchActive = (not radial) and total >= SEARCH_THRESHOLD
 	self.search:SetShown(self.searchActive)
 
@@ -161,18 +190,26 @@ function Flyout:ApplyLayout()
 	local count = #buttons
 	local size, spacing = p.tileSize, p.spacing
 
-	for i = count + 1, #self.tiles do self.tiles[i]:Hide() end
+	-- Hide tiles whose buttons aren't currently shown.
+	local shown = {}
+	for _, rec in ipairs(buttons) do shown[rec.name] = true end
+	for name, tile in pairs(self.tilesByName) do
+		if not shown[name] then tile:Hide() end
+	end
 
 	local hosted = 0
 	if radial and count > 1 then
-		-- Ring of buttons around the panel centre; background hidden.
 		local step = (2 * math.pi) / count
 		local radius = math.max(size, (count * (size + spacing)) / (2 * math.pi))
-		for index, record in ipairs(buttons) do
-			local angle = -math.pi / 2 + (index - 1) * step
-			if self:HostAt(index, record, size, "CENTER",
-				math.cos(angle) * radius, math.sin(angle) * radius) then
+		for i, record in ipairs(buttons) do
+			local tile = self:EnsureTile(record, size)
+			if tile then
 				hosted = hosted + 1
+				local angle = -math.pi / 2 + (i - 1) * step
+				tile.tx = nil -- excluded from the grid driver
+				tile:ClearAllPoints()
+				tile:SetPoint("CENTER", self.grid, "CENTER",
+					math.cos(angle) * radius, math.sin(angle) * radius)
 			end
 		end
 		local dim = (radius + size) * 2
@@ -182,17 +219,18 @@ function Flyout:ApplyLayout()
 		self.panel:SetSize(dim + PADDING, dim + PADDING)
 		Theme:SetPanelOpacity(self.panel, 0)
 	else
-		-- Base column count (and thus panel width) on the total collected, not
-		-- the filtered count, so searching doesn't shrink the tray.
-		local widthCount = self.searchActive and ns.Collector:Count() or count
+		-- Width keys off the total (not the filtered count) so search doesn't
+		-- shrink the tray.
+		local widthCount = self.searchActive and total or count
 		local cols = math.max(1, math.min(p.columns, math.max(widthCount, 1)))
 		local rows = math.max(1, math.ceil(math.max(count, 1) / cols))
-		for index, record in ipairs(buttons) do
-			local col = (index - 1) % cols
-			local row = math.floor((index - 1) / cols)
-			if self:HostAt(index, record, size, "TOPLEFT",
-				col * (size + spacing), -row * (size + spacing)) then
+		for i, record in ipairs(buttons) do
+			local tile = self:EnsureTile(record, size)
+			if tile then
 				hosted = hosted + 1
+				local col = (i - 1) % cols
+				local row = math.floor((i - 1) / cols)
+				self:Place(tile, col * (size + spacing), -row * (size + spacing), snap)
 			end
 		end
 		local searchOff = self.searchActive and (SEARCH_H + 6) or 0
@@ -203,7 +241,6 @@ function Flyout:ApplyLayout()
 		self.grid:SetSize(math.max(gridW, 1), math.max(gridH, 1))
 		self.panel:SetSize(gridW + PADDING * 2, gridH + PADDING * 2 + searchOff)
 		Theme:SetPanelOpacity(self.panel, p.trayOpacity)
-
 		if self.searchActive then
 			self.search:ClearAllPoints()
 			self.search:SetPoint("TOPLEFT", self.panel, "TOPLEFT", PADDING, -PADDING)
@@ -242,7 +279,7 @@ end
 function Flyout:Open()
 	if self.isOpen then return end
 	self.isOpen = true
-	self:ApplyLayout()
+	self:ApplyLayout(true) -- snap tiles into place; the panel itself fades in
 	self.animOut:Stop()
 	self.panel:SetAlpha(0)
 	self.panel:Show()
@@ -263,7 +300,45 @@ end
 
 -- ─── Drag-to-reorder (grid mode) ─────────────────────────────────────
 
---- Start dragging a collected button; its tile follows the cursor.
+--- Grid slot index under a cursor position (grid-local UI coords).
+function Flyout:HoverIndex(cx, cy)
+	local p = ns.db.profile
+	local cell = p.tileSize + p.spacing
+	local cols = self.dragCols or 1
+	local n = #(self.dragVisible or {})
+	local gx, gy = self.grid:GetLeft(), self.grid:GetTop()
+	if not gx or not gy then return n end
+	local col = math.max(0, math.min(cols - 1, math.floor((cx - gx) / cell)))
+	local row = math.max(0, math.floor((gy - cy) / cell))
+	return math.max(1, math.min(n, row * cols + col + 1))
+end
+
+--- Shift the non-dragged tiles to open a gap at hoverIndex (animated).
+function Flyout:ReflowDuringDrag(hoverIndex)
+	local p = ns.db.profile
+	local size, spacing, cols = p.tileSize, p.spacing, self.dragCols
+
+	local seq = {}
+	for _, record in ipairs(self.dragVisible) do
+		if record ~= self.dragging then seq[#seq + 1] = record end
+	end
+	hoverIndex = math.max(1, math.min(#seq + 1, hoverIndex))
+	table.insert(seq, hoverIndex, self.dragging)
+	self.dragSeq = seq
+
+	for i, record in ipairs(seq) do
+		if record ~= self.dragging then
+			local tile = record.frame.haloTile
+			if tile then
+				local col = (i - 1) % cols
+				local row = math.floor((i - 1) / cols)
+				tile.tx = col * (size + spacing)
+				tile.ty = -row * (size + spacing)
+			end
+		end
+	end
+end
+
 function Flyout:BeginDrag(name)
 	if ns.db.profile.layout ~= "grid" then return end
 	if self.searchActive and (self.searchText or "") ~= "" then return end
@@ -272,43 +347,64 @@ function Flyout:BeginDrag(name)
 	if not tile then return end
 
 	self.dragging = record
+	self.dragVisible = self:GetVisibleButtons()
+	self.dragCols = math.max(1, math.min(ns.db.profile.columns, math.max(#self.dragVisible, 1)))
+	self.dragHover = nil
+	tile.dragBaseLevel = tile:GetFrameLevel()
 	tile:SetFrameLevel(tile:GetFrameLevel() + 20)
+	tile:SetScale(1.12)
+	if tile.highlight then tile.highlight:Show() end
+
 	tile:SetScript("OnUpdate", function()
 		local scale = tile:GetEffectiveScale()
 		local cx, cy = GetCursorPosition()
+		cx, cy = cx / scale, cy / scale
 		tile:ClearAllPoints()
-		tile:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cx / scale, cy / scale)
+		tile:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cx, cy)
+		local idx = self:HoverIndex(cx, cy)
+		if idx ~= self.dragHover then
+			self.dragHover = idx
+			self:ReflowDuringDrag(idx)
+		end
 	end)
+	self:ReflowDuringDrag(self:HoverIndexFromTile(tile))
 end
 
---- Drop the dragged button into the slot under the cursor and persist order.
+--- Best-effort initial hover index from the tile's current spot.
+function Flyout:HoverIndexFromTile(tile)
+	if not self.grid:GetLeft() or not tile:GetLeft() then return 1 end
+	return self:HoverIndex(tile:GetLeft(), tile:GetTop())
+end
+
 function Flyout:EndDrag()
 	local record = self.dragging
 	if not record then return end
-	self.dragging = nil
-
 	local tile = record.frame.haloTile
-	if tile then tile:SetScript("OnUpdate", nil) end
+	local seq = self.dragSeq
 
-	local p = ns.db.profile
-	local count = #self:GetVisibleButtons()
-	local cols = math.max(1, math.min(p.columns, math.max(count, 1)))
-	local cell = p.tileSize + p.spacing
-
-	local target = count
-	local gx, gy = self.grid:GetLeft(), self.grid:GetTop()
-	if gx and gy then
-		local scale = self.grid:GetEffectiveScale()
-		local cx, cy = GetCursorPosition()
-		cx, cy = cx / scale, cy / scale
-		local col = math.max(0, math.min(cols - 1, math.floor((cx - gx) / cell)))
-		local row = math.max(0, math.floor((gy - cy) / cell))
-		target = row * cols + col + 1
+	if tile then
+		tile:SetScript("OnUpdate", nil)
+		tile:SetScale(1)
+		if tile.highlight then tile.highlight:Hide() end
+		tile:SetFrameLevel(tile.dragBaseLevel or self.grid:GetFrameLevel() + 1)
+		-- Seed the dropped tile's current grid-local position so it eases from
+		-- where it was released into its final slot.
+		local gx, gy = self.grid:GetLeft(), self.grid:GetTop()
+		if gx and gy and tile:GetLeft() then
+			tile.x = tile:GetLeft() - gx
+			tile.y = tile:GetTop() - gy
+		end
 	end
-	self:MoveButton(record.name, target)
+
+	self.dragging, self.dragSeq, self.dragHover, self.dragVisible = nil, nil, nil, nil
+	if seq then
+		for i, rec in ipairs(seq) do ns.db.profile.order[rec.name] = i end
+	end
+	self:ApplyLayout() -- animate everything (incl. the dropped tile) into place
 end
 
---- Move a button to targetIndex in the saved tray order and relayout.
+--- Move a button to targetIndex in the saved tray order and relayout. Used by
+--- the drop handler and exposed for tests.
 function Flyout:MoveButton(name, targetIndex)
 	local names = {}
 	for _, record in ipairs(self:GetVisibleButtons()) do names[#names + 1] = record.name end
