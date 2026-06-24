@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-06-24
+
 ### Fixed
 - Tray now sits at DIALOG strata so quest-tracker text (Questie, etc.) and other
   MEDIUM-strata UI no longer bleed through the panel; collected buttons are
@@ -52,6 +54,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Headless CI: luacheck plus a mock-WoW load test that simulates a full session.
 - BigWigs packager release workflow.
 
-[Unreleased]: https://github.com/adbergen/Halo/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/adbergen/Halo/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/adbergen/Halo/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/adbergen/Halo/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/adbergen/Halo/releases/tag/v1.0.0
