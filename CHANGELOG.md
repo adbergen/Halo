@@ -6,6 +6,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- Retail (Mainline, 120007) and Classic Era (Vanilla, 11508) support via
+  per-flavor `.toc` files. TBC Anniversary is unchanged (base `Halo.toc`, 20505).
+  Core collecting and the UI work on all flavors; the opt-in Blizzard buttons are
+  flavor-dependent since some of those frames only exist on certain clients.
+
 ## [1.1.1] - 2026-06-24
 
 ### Fixed
