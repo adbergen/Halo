@@ -6,10 +6,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-06-25
+
 ### Added
-- Retail (Mainline, 120007) and Classic Era (Vanilla, 11508) support via
-  per-flavor `.toc` files. TBC Anniversary is unchanged (base `Halo.toc`, 20505).
-  Core collecting and the UI work on all flavors; the opt-in Blizzard buttons are
+- **Retail and Classic Era support** via per-flavor `.toc` files
+  (`Halo_Mainline.toc`, `Halo_Vanilla.toc`); TBC Anniversary is unchanged. Core
+  collecting and the UI work on all flavors; the opt-in Blizzard buttons are
   flavor-dependent since some of those frames only exist on certain clients.
 
 ## [1.1.1] - 2026-06-24
@@ -60,7 +62,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Headless CI: luacheck plus a mock-WoW load test that simulates a full session.
 - BigWigs packager release workflow.
 
-[Unreleased]: https://github.com/adbergen/Halo/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/adbergen/Halo/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/adbergen/Halo/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/adbergen/Halo/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/adbergen/Halo/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/adbergen/Halo/releases/tag/v1.0.0

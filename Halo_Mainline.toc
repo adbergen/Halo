@@ -1,14 +1,14 @@
-## Interface: 120007
+## Interface: 120100, 120007
 ## Title: Halo
 ## Notes: Tidy your minimap — gather every addon button into one elegant launcher.
 ## Author: adbergen
-## Version: 1.1.1
+## Version: 1.2.0
 ## SavedVariables: HaloDB
 ## IconTexture: Interface\AddOns\Halo\Media\halo-logo
 ## X-License: MIT
 ## X-Website: https://github.com/adbergen/Halo
 ## X-Category: Map & Minimap
-## X-Curse-Project-ID:
+## X-Curse-Project-ID: 1586547
 ## X-Wago-ID:
 
 # ─── Embedded libraries ──────────────────────────────────────────────
