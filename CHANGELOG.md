@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- **World of Warcraft: Forever support** via `Halo_Camelot.toc` (`_Camelot` is the
+  Forever flavor suffix) at Interface `16001`, the current Forever Beta client
+  (build 1.60.x). Forever runs the modern API, so nothing in the addon needed to
+  change — the existing `Settings` / `C_AddOns` / `SetFixedFrameStrata` guards and
+  the LibDBIcon collecting path already cover it. Tag uploads now include the
+  `1.60.1` CurseForge game version.
+
 ## [1.2.0] - 2026-06-25
 
 ### Added

@@ -7,7 +7,7 @@
 A modern World of Warcraft addon that sweeps every cluttered addon button off your
 minimap and tucks them into a single, beautiful launcher.
 
-[![WoW](https://img.shields.io/badge/WoW-Retail%20%C2%B7%20Classic%20Era%20%C2%B7%20TBC%20Anniversary-f8b700)](https://warcraft.wiki.gg/wiki/Interface_customization)
+[![WoW](https://img.shields.io/badge/WoW-Retail%20%C2%B7%20Forever%20%C2%B7%20Classic%20Era%20%C2%B7%20TBC%20Anniversary-f8b700)](https://warcraft.wiki.gg/wiki/Interface_customization)
 [![Lint & Test](https://github.com/adbergen/Halo/actions/workflows/lint.yml/badge.svg)](https://github.com/adbergen/Halo/actions/workflows/lint.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-66b3ff.svg)](LICENSE)
 
