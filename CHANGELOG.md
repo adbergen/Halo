@@ -14,6 +14,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the LibDBIcon collecting path already cover it. Tag uploads now include the
   `1.60.1` CurseForge game version.
 
+### Changed
+- Refreshed interface versions for the live clients: TBC Anniversary `20505` →
+  `20506` (the base `Halo.toc`) and Classic Era `11508` → `11509, 11508`, with the
+  matching `2.5.6` / `1.15.9` CurseForge game versions. Retail is unchanged —
+  `120100` is still current.
+
 ## [1.2.0] - 2026-06-25
 
 ### Added

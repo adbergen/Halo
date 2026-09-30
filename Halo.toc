@@ -1,4 +1,4 @@
-## Interface: 20505
+## Interface: 20506
 ## Title: Halo
 ## Notes: Tidy your minimap — gather every addon button into one elegant launcher.
 ## Author: adbergen
