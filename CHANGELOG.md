@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-30
+
 ### Added
 - **World of Warcraft: Forever support** via `Halo_Camelot.toc` (`_Camelot` is the
   Forever flavor suffix) at Interface `16001`, the current Forever Beta client
@@ -76,7 +78,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Headless CI: luacheck plus a mock-WoW load test that simulates a full session.
 - BigWigs packager release workflow.
 
-[Unreleased]: https://github.com/adbergen/Halo/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/adbergen/Halo/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/adbergen/Halo/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/adbergen/Halo/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/adbergen/Halo/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/adbergen/Halo/compare/v1.0.0...v1.1.0
