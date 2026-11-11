@@ -135,7 +135,8 @@ function Flyout:SetupDriver()
 		if not (self.isOpen and ns.db.profile.autoHide) then return end
 		local launcher = ns.Launcher and ns.Launcher:GetButton()
 		local editBox = self.search and self.search.editBox
-		if MouseIsOver(self.panel) or (launcher and MouseIsOver(launcher))
+		-- The region method, not the MouseIsOver global: Forever does not define it.
+		if self.panel:IsMouseOver() or (launcher and launcher:IsMouseOver())
 			or (editBox and editBox:HasFocus()) then
 			elapsed = 0
 			return

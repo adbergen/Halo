@@ -145,12 +145,15 @@ function Widgets:Slider(parent, labelText, minV, maxV, step, get, set)
 		return ("%.2f"):format(v)
 	end
 
+	-- Set the starting value before the handler exists: SetValue fires
+	-- OnValueChanged, and calling set() while the panel is still being built
+	-- refreshes controls that do not exist yet.
+	slider:SetValue(get())
+	value:SetText(fmt(get()))
 	slider:SetScript("OnValueChanged", function(_, v)
 		value:SetText(fmt(v))
 		set(v)
 	end)
-	slider:SetValue(get())
-	value:SetText(fmt(get()))
 	f.slider = slider
 	return f
 end

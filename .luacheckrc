@@ -25,7 +25,7 @@ globals = {
 read_globals = {
 	"CreateFrame", "UIParent", "Minimap", "MinimapBackdrop", "GameTooltip",
 	"C_Timer", "C_AddOns", "GetAddOnMetadata", "hooksecurefunc", "LibStub",
-	"Settings", "SlashCmdList", "MouseIsOver", "wipe", "unpack", "GetCursorPosition",
+	"Settings", "SlashCmdList", "wipe", "unpack", "GetCursorPosition",
 	"GameFontNormal", "GameFontNormalLarge", "GameFontHighlight",
 	"GameFontHighlightSmall", "GameFontDisableSmall",
 }
