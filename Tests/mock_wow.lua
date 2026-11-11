@@ -76,7 +76,16 @@ function methods.GetVerticalScroll() return 0 end
 function methods.GetLeft() return 0 end
 function methods.GetTop() return 0 end
 function methods.GetValue(self) return self.__value or 0 end
-function methods.SetValue(self, v) self.__value = v; return self end
+-- Like the client, a value change fires OnValueChanged straight away, even
+-- when the change comes from code rather than the user.
+function methods.SetValue(self, v)
+	local changed = v ~= self.__value
+	self.__value = v
+	if changed and self.__scripts.OnValueChanged then self.__scripts.OnValueChanged(self, v) end
+	return self
+end
+function methods.IsMouseOver() return false end
+function methods.HasFocus() return false end
 function methods.IsForbidden() return false end
 function methods.IsShown(self) return self.__shown ~= false end
 function methods.IsVisible(self) return self.__shown ~= false end
@@ -141,7 +150,8 @@ C_Timer = { After = function(_, fn) if fn then fn() end end } -- run synchronous
 C_AddOns = { GetAddOnMetadata = function(_, key) return key == "Version" and "1.0.0-test" or "" end }
 function GetAddOnMetadata(_, key) return key == "Version" and "1.0.0-test" or "" end
 
-function MouseIsOver() return false end
+-- No MouseIsOver: the Forever client does not define it, so code must use
+-- the region method IsMouseOver, which every client has.
 function GetCursorPosition() return 0, 0 end
 function wipe(t) for k in pairs(t) do t[k] = nil end return t end
 

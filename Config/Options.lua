@@ -241,7 +241,7 @@ end
 
 function Options:RebuildButtonList()
 	local content = self.content
-	if not content then return end
+	if not content or not self.listTop then return end -- panel still being built
 
 	for _, cb in ipairs(self.buttonChecks) do
 		cb:Hide()

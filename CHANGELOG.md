@@ -6,6 +6,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-11-11
+
+### Fixed
+- **WoW Forever: Lua errors every frame while the tray was open**, which raised
+  the "AddOns are experiencing a large number of errors" warning and kept the
+  tray from auto-hiding. The auto-hide check used the `MouseIsOver` global, which
+  Forever does not define; it now uses the region method `IsMouseOver`.
+- **Errors at login while the settings panel was built.** Each slider ran its
+  change handler while being created, which refreshed the button list before it
+  existed.
+
 ## [1.3.0] - 2026-09-30
 
 ### Added

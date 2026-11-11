@@ -76,6 +76,16 @@ assert(slash, "slash command not registered")
 slash(""); slash("config"); slash("help"); slash("reset")
 print("[6/7] tray + slash commands OK")
 
+-- Auto-hide runs every frame while the tray is open, so an error there
+-- repeats every frame (Forever has no MouseIsOver global).
+ns.db.profile.autoHide = true
+ns.Flyout:Open()
+local onUpdate = ns.Flyout.panel:GetScript("OnUpdate")
+assert(onUpdate, "tray OnUpdate driver not set")
+onUpdate(ns.Flyout.panel, 1)
+assert(not ns.Flyout.isOpen, "tray did not auto-hide with the mouse away")
+print("[6b] tray auto-hide OK")
+
 -- Options panel build + opt-out flow.
 local onShow = ns.Options.panel:GetScript("OnShow")
 assert(onShow, "options OnShow not set")
