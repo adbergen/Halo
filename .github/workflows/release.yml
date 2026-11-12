@@ -11,6 +11,12 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      # CurseForge game versions, one per supported client patch. The Wago step
+      # sorts the same list into Wago's games, so this is the only place to edit.
+      GAME_VERSIONS: "2.5.6,1.15.8,1.15.9,1.60.1,12.1.5,12.1.7"
+      # Repository variable; Wago uploads are skipped until it is set.
+      WAGO_PROJECT_ID: ${{ vars.WAGO_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -22,12 +28,18 @@ jobs:
             --exclude='.github' \
             --exclude='release' \
             --exclude='Tests' \
+            --exclude='docs' \
             --exclude='*.md' \
             --exclude='.editorconfig' \
             --exclude='.luacheckrc' \
             --exclude='.pkgmeta' \
             --exclude='logo*.png' \
             ./ release/Halo/
+          # The Wago app and WowUp match an installed addon to its Wago project
+          # through this toc field.
+          if [ -n "$WAGO_PROJECT_ID" ]; then
+            sed -i "s/^## X-Wago-ID:.*/## X-Wago-ID: $WAGO_PROJECT_ID/" release/Halo/*.toc
+          fi
           cd release && zip -r Halo-${{ github.ref_name }}.zip Halo
 
       - name: Extract changelog
@@ -49,8 +61,38 @@ jobs:
           changelog: ${{ steps.changelog.outputs.content }}
           changelog_type: markdown
           display_name: Halo ${{ github.ref_name }}
-          game_versions: "2.5.6,1.15.8,1.15.9,1.60.1,12.1.5,12.1.7"
+          game_versions: ${{ env.GAME_VERSIONS }}
           release_type: release
+
+      - name: Upload to Wago
+        if: ${{ vars.WAGO_PROJECT_ID != '' }}
+        env:
+          WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+        run: |
+          tail -n +3 CHANGELOG.md > release/changelog.md
+          # Same request the BigWigs packager sends: the zip plus a metadata
+          # block naming the supported patches per Wago game.
+          jq -n \
+            --arg label "$GITHUB_REF_NAME" \
+            --arg versions "$GAME_VERSIONS" \
+            --rawfile changelog release/changelog.md \
+            '($versions | split(",")) as $v
+             | {
+                 label: $label,
+                 stability: "stable",
+                 changelog: $changelog,
+                 supported_retail_patches:  [$v[] | select(test("^[1-9][0-9]\\."))],
+                 supported_bc_patches:      [$v[] | select(test("^2\\.5\\."))],
+                 supported_classic_patches: [$v[] | select(test("^1\\.1[0-5]\\."))],
+                 supported_forever_patches: [$v[] | select(test("^1\\.60\\."))]
+               }
+             | with_entries(select(.value != []))' > release/wago.json
+          curl -sS --fail-with-body --retry 3 --retry-delay 10 \
+            -H "authorization: Bearer $WAGO_API_TOKEN" \
+            -H "accept: application/json" \
+            -F "metadata=<release/wago.json" \
+            -F "file=@release/Halo-${GITHUB_REF_NAME}.zip" \
+            "https://addons.wago.io/api/projects/${WAGO_PROJECT_ID}/version"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
