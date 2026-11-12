@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-11-11
+
+### Changed
+- Refreshed the Retail interface versions: `120100, 120007` → `120105, 120107`
+  (live 12.1.5 and the 12.1.7 PTR), so Retail no longer lists Halo as out of
+  date. Uploads now carry the `12.1.5` and `12.1.7` CurseForge game versions in
+  place of `12.0.7` and `12.1.0`.
+
 ## [1.3.1] - 2026-11-11
 
 ### Fixed
@@ -89,7 +97,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Headless CI: luacheck plus a mock-WoW load test that simulates a full session.
 - BigWigs packager release workflow.
 
-[Unreleased]: https://github.com/adbergen/Halo/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/adbergen/Halo/compare/v1.3.2...HEAD
+[1.3.2]: https://github.com/adbergen/Halo/compare/v1.3.1...v1.3.2
+[1.3.1]: https://github.com/adbergen/Halo/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/adbergen/Halo/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/adbergen/Halo/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/adbergen/Halo/compare/v1.1.0...v1.1.1
