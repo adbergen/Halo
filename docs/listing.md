@@ -54,6 +54,9 @@ tray; click away and they tuck back out of sight.
 - **One button on the minimap.** Everything else lives in the tray.
 - **Catches everything:** LibDBIcon buttons, hand-made minimap buttons, and
   buttons that appear after you log in.
+- **Every launcher in one place:** on Retail and WoW Forever, addons in
+  Blizzard's addon menu get a tray button too, even ones with no minimap button.
+  Nothing shows up twice.
 - **Grid or ring layout,** with drag-to-reorder and a search box once the tray
   fills up.
 - **Yours to tune:** columns, tile size, spacing, opacity, scale, open on hover,

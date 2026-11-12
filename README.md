@@ -34,6 +34,9 @@ moment you click away, they tuck themselves back out of sight.
   highlights, and smooth fade/scale animations. No dated gold borders.
 - 🧲 **Catches everything** — modern [LibDBIcon] buttons *and* hand-rolled legacy
   minimap buttons, including ones that appear after you log in.
+- 📋 **Every launcher in one place** — on Retail and WoW Forever, addons in
+  Blizzard's addon menu get a tray button too, even ones with no minimap button.
+  Nothing shows up twice.
 - 🎛️ **Yours to tune** — columns, tile size, spacing, opacity, scale, click-vs-hover
   open, and a per-button opt-out, all in a clean settings panel.
 - 🪶 **Lossless & safe** — opt any button back onto the minimap at any time. Halo
@@ -42,7 +45,9 @@ moment you click away, they tuck themselves back out of sight.
 ## How it works
 
 1. **Detect** — Halo asks LibDBIcon for its registered buttons and scans the
-   minimap for legacy buttons, skipping all of Blizzard's own frames.
+   minimap for legacy buttons, skipping all of Blizzard's own frames. Where the
+   client has Blizzard's addon menu, each entry not already found gets a stand-in
+   button drawn like a minimap button.
 2. **Adopt** — each button is re-parented into the tray and pinned in place (if an
    addon tries to yank its button back, Halo gently re-seats it).
 3. **Reveal** — clicking the launcher fades the tray open in a reflowing grid.
@@ -94,7 +99,7 @@ Open with `/halo config` or right-click the launcher.
 
 ```
 Halo/
-├── Core/        Init · Detector · Collector · Launcher  (detection + lifecycle)
+├── Core/        Init · Compartment · Detector · Collector · Launcher  (detection + lifecycle)
 ├── UI/          Theme · Widgets · Flyout                (the look + the tray)
 ├── Config/      Options                                 (custom settings canvas)
 ├── Locales/     enUS                                    (localization)

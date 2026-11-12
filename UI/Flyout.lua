@@ -175,7 +175,7 @@ function Flyout:GetVisibleButtons()
 	q = q:lower()
 	local out = {}
 	for _, record in ipairs(all) do
-		local label = record.name:gsub("^LibDBIcon10_", ""):lower()
+		local label = (ns.Compartment:Label(record.name) or record.name:gsub("^LibDBIcon10_", "")):lower()
 		if label:find(q, 1, true) then out[#out + 1] = record end
 	end
 	return out

@@ -22,7 +22,14 @@ Options.buttonChecks = {}  -- per-button checkboxes (rebuilt on show)
 local LEFT = 10            -- content left margin
 
 local function profile() return ns.db.profile end
-local function prettyName(name) return (name:gsub("^LibDBIcon10_", "")) end
+local function prettyName(name)
+	local prefix = ns.Compartment.PREFIX
+	if name:sub(1, #prefix) == prefix then
+		local label = ns.Compartment:Label(name) or name:sub(#prefix + 1)
+		return label .. " " .. L["(addon menu)"]
+	end
+	return (name:gsub("^LibDBIcon10_", ""))
+end
 
 local function profileOptions()
 	local list = {}
@@ -202,6 +209,9 @@ function Options:Setup()
 	blizzCheck(L["Mail"], "mail")
 	blizzCheck(L["Tracking"], "tracking")
 	blizzCheck(L["Battlegrounds"], "battlefield")
+	if ns.Compartment:IsAvailable() then
+		blizzCheck(L["Addons in Blizzard's addon menu"], "compartment")
+	end
 
 	-- Collected-buttons list header (the list itself is rebuilt on show)
 	stack(Widgets:Header(content, L["Collected buttons"]), 8)

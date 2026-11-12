@@ -7,6 +7,8 @@
 	  2. Legacy buttons — frames an addon parented to the Minimap by hand.
 	     Identified heuristically and filtered against a blacklist of Blizzard's
 	     own minimap frames so we never touch those.
+	  3. Blizzard's addon menu (Retail, Forever) — stand-in buttons for its
+	     entries, from Core/Compartment.lua, minus addons found by 1 or 2.
 
 	The detector only *reports* buttons; Collector.lua decides what to do with
 	them. Keeping detection pure makes it easy to test and reason about.
@@ -18,6 +20,7 @@ local Detector = {}
 ns.Detector = Detector
 
 local LibDBIcon = LibStub("LibDBIcon-1.0", true)
+local Compartment = ns.Compartment
 
 -- Blizzard's own minimap children — never collect these (exact names).
 local BLIZZARD = {
@@ -150,7 +153,7 @@ function Detector:GetOptedInBlizzard()
 end
 
 --- Everything collectable right now, keyed by button name.
--- Each value is { frame = <frame>, source = "libdbicon"|"legacy"|"blizzard" }.
+-- Each value is { frame = <frame>, source = "libdbicon"|"legacy"|"blizzard"|"compartment" }.
 function Detector:Scan()
 	local result = {}
 	for name, frame in pairs(self:GetLibDBIconButtons()) do
@@ -165,6 +168,12 @@ function Detector:Scan()
 	for name, frame in pairs(self:GetOptedInBlizzard()) do
 		if not result[name] then
 			result[name] = { frame = frame, source = "blizzard" }
+		end
+	end
+	-- Last, so the menu's entries are checked against everything found above.
+	if ns.db.profile.collect.compartment then
+		for name, frame in pairs(Compartment:Scan(result)) do
+			result[name] = { frame = frame, source = "compartment" }
 		end
 	end
 	return result

@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- **Blizzard's addon menu, in the tray.** On Retail and WoW Forever, addons listed
+  in the addon menu beside the minimap clock now get a button in the tray too, so
+  the tray holds every addon launcher, including addons that have no minimap
+  button. An addon already in the tray from the minimap is not listed twice. On by
+  default; turn it off under "Collect Blizzard buttons", or uncheck single entries
+  in the collected-buttons list. Blizzard's own menu is left as it is.
+
 ## [1.3.2] - 2026-11-11
 
 ### Changed

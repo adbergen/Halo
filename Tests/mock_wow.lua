@@ -147,8 +147,35 @@ end
 
 C_Timer = { After = function(_, fn) if fn then fn() end end } -- run synchronously
 
-C_AddOns = { GetAddOnMetadata = function(_, key) return key == "Version" and "1.0.0-test" or "" end }
+-- Installed addons other than Halo, for code that walks the addon list
+-- (M.addAddOn adds one). Lookups take an index or a folder name.
+M.addons = {}
+local function findAddOn(id)
+	if type(id) == "number" then return M.addons[id] end
+	for _, addon in ipairs(M.addons) do
+		if addon.name == id then return addon end
+	end
+	return nil
+end
+C_AddOns = {
+	GetAddOnMetadata = function(id, key)
+		local addon = findAddOn(id)
+		if addon then return addon.meta[key] end
+		return key == "Version" and "1.0.0-test" or ""
+	end,
+	GetNumAddOns = function() return #M.addons end,
+	GetAddOnInfo = function(id)
+		local addon = findAddOn(id)
+		if addon then return addon.name, addon.title end
+		return nil
+	end,
+	IsAddOnLoaded = function() return true end,
+	LoadAddOn = function() return true end,
+}
 function GetAddOnMetadata(_, key) return key == "Version" and "1.0.0-test" or "" end
+
+WOW_PROJECT_MAINLINE = 1
+WOW_PROJECT_ID = WOW_PROJECT_MAINLINE
 
 -- No MouseIsOver: the Forever client does not define it, so code must use
 -- the region method IsMouseOver, which every client has.
@@ -196,9 +223,10 @@ local fakeAceDB = {
 -- test catches the addon collecting its own launcher.
 local registered = {}
 local fakeLibDBIcon = {
-	Register = function(_, name)
+	Register = function(_, name, object)
 		local b = CreateFrame("Button", "LibDBIcon10_" .. name, Minimap)
 		b:SetSize(31, 31)
+		b.dataObject = object
 		registered[name] = b
 		return b
 	end,
@@ -238,6 +266,17 @@ GameTooltip = CreateFrame("Frame", "GameTooltip", UIParent)
 GameTooltip.AddLine = function() end
 GameTooltip.SetOwner = function() end
 
+-- Blizzard's addon menu, as on Retail and Forever. Like the client, every
+-- change ends with UpdateDisplay; the real one is parented to MinimapCluster,
+-- so it is not a Minimap child here either.
+AddonCompartmentFrame = CreateFrame("Button", "AddonCompartmentFrame", UIParent)
+AddonCompartmentFrame.registeredAddons = {}
+function AddonCompartmentFrame.UpdateDisplay() end
+function AddonCompartmentFrame:RegisterAddon(data)
+	table.insert(self.registeredAddons, data)
+	self:UpdateDisplay()
+end
+
 -- ─── Test helpers ────────────────────────────────────────────────────
 
 function M.fireEvent(event, ...)
@@ -246,6 +285,12 @@ function M.fireEvent(event, ...)
 			frame.__scripts.OnEvent(frame, event, ...)
 		end
 	end
+end
+
+--- Install a fake addon: { name = folder, title = toc title, meta = { toc fields } }.
+function M.addAddOn(addon)
+	addon.meta = addon.meta or {}
+	table.insert(M.addons, addon)
 end
 
 --- Create a fake legacy addon button on the minimap for collection tests.

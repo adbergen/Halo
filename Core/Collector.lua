@@ -190,20 +190,26 @@ end
 function Collector:Rescan()
 	if not self.started then return end
 
+	local found = Detector:Scan()
+
 	-- Release collected buttons the user now wants back on the minimap: ones they
 	-- opted out of, and Blizzard frames whose opt-in toggle was turned back off.
+	-- Addon-menu stand-ins go when their entry is gone, the option is off, or the
+	-- addon's own button has turned up.
 	local toRelease = {}
 	for name, record in pairs(self.byName) do
 		if self:IsIgnored(name) then
 			toRelease[#toRelease + 1] = name
 		elseif record.source == "blizzard" and not Detector:IsOptedIn(name) then
 			toRelease[#toRelease + 1] = name
+		elseif record.source == "compartment" and not found[name] then
+			toRelease[#toRelease + 1] = name
 		end
 	end
 	for _, name in ipairs(toRelease) do self:Release(name) end
 
 	-- Adopt anything newly detected and not opted out.
-	for name, info in pairs(Detector:Scan()) do
+	for name, info in pairs(found) do
 		if not self:IsIgnored(name) and not self.byName[name] then
 			self:Adopt(name, info.frame, info.source)
 		end
@@ -217,22 +223,16 @@ function Collector:Start()
 	if self.started then return end
 	self.started = true
 
-	-- Catch buttons that register after login (the common case).
+	-- Catch buttons that register after login (the common case). A full rescan
+	-- rather than a single adopt, so an addon-menu stand-in for the same addon
+	-- makes way for its real button.
 	if LibDBIcon then
 		hooksecurefunc(LibDBIcon, "Register", function(_, name)
 			if name == ns.ADDON then return end -- never collect our own launcher
-			C_Timer.After(0, function()
-				if self.started and not self:IsIgnored(name) and not self.byName[name] then
-					local frame = LibDBIcon:GetMinimapButton(name)
-					if frame then
-						self:Adopt(name, frame, "libdbicon")
-						ns.Flyout:ApplyLayout()
-						if ns.Launcher then ns.Launcher:Refresh() end
-					end
-				end
-			end)
+			C_Timer.After(0, function() self:Rescan() end)
 		end)
 	end
+	ns.Compartment:Watch(function() self:Rescan() end)
 
 	self:Rescan()
 end

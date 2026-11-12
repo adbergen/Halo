@@ -69,6 +69,8 @@ L["Looking For Group"] = "Looking For Group"
 L["Mail"] = "Mail"
 L["Tracking"] = "Tracking"
 L["Battlegrounds"] = "Battlegrounds"
+L["Addons in Blizzard's addon menu"] = "Addons in Blizzard's addon menu"
+L["(addon menu)"] = "(addon menu)"
 L["Collected buttons"] = "Collected buttons"
 L["Uncheck a button to keep it on the minimap instead of in the tray."]
 	= "Uncheck a button to keep it on the minimap instead of in the tray."
