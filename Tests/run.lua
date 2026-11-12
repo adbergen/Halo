@@ -33,7 +33,7 @@ end
 -- Same order as Halo.toc.
 local FILES = {
 	"Locales/enUS.lua",
-	"Core/Init.lua", "Core/Detector.lua", "Core/Collector.lua", "Core/Launcher.lua",
+	"Core/Init.lua", "Core/Compartment.lua", "Core/Detector.lua", "Core/Collector.lua", "Core/Launcher.lua",
 	"UI/Theme.lua", "UI/Animation.lua", "UI/Widgets.lua", "UI/Flyout.lua",
 	"Config/Options.lua",
 }
@@ -110,5 +110,63 @@ ns.db.profile.collect.mail = false
 ns.Collector:Rescan()
 assert(ns.Collector.byName["MiniMapMailFrame"] == nil, "mail not released after opting out")
 print("[8/8] Blizzard opt-in flow OK")
+
+-- Blizzard's addon menu (Retail, Forever): each entry gets a tray button, an
+-- entry for an addon whose own button is already collected is skipped, and a
+-- click reaches the addon the way the menu's own click would.
+local menuClicks = {}
+_G.FakeBags_OnAddonMenu = function(addon, mouseButton)
+	menuClicks[#menuClicks + 1] = addon .. ":" .. mouseButton
+end
+mock.addAddOn({ name = "FakeBags", title = "|cff33ff99Fake Bags|r",
+	meta = { AddonCompartmentFunc = "FakeBags_OnAddonMenu" } })
+-- What Blizzard registers for that toc line. Its wrapper is not the one to call.
+AddonCompartmentFrame:RegisterAddon({ text = "|cff33ff99Fake Bags|r", icon = 136467,
+	func = function() error("called Blizzard's wrapper instead of the addon's global") end })
+local custom = {}
+AddonCompartmentFrame:RegisterAddon({ text = "Custom Tool", icon = "Interface\\Icons\\Custom",
+	func = function(_, input, frame) custom.button, custom.frame = input.buttonName, frame end })
+-- A LibDBIcon addon that also shows itself in the menu under its LibDBIcon name.
+LibStub("LibDBIcon-1.0"):Register("Bagnonly", { icon = "Interface\\Icons\\Bagnonly" })
+AddonCompartmentFrame:RegisterAddon({ text = "Bagnonly", icon = "Interface\\Icons\\Bagnonly",
+	func = function() end })
+-- A toc entry whose LibDBIcon button is named after the addon plus a suffix and
+-- uses a different icon, like RareScanner's "RareScannerMinimapIcon".
+LibStub("LibDBIcon-1.0"):Register("FakeScannerMinimapIcon", { icon = "Interface\\Icons\\Skull" })
+mock.addAddOn({ name = "FakeScanner", title = "FakeScanner",
+	meta = { AddonCompartmentFunc = "FakeScanner_OnAddonMenu" } })
+AddonCompartmentFrame:RegisterAddon({ text = "FakeScanner", icon = "Interface\\AddOns\\FakeScanner\\Logo",
+	func = function() end })
+
+local bags = ns.Collector.byName["AddonMenu_FakeBags"]
+assert(bags and bags.source == "compartment", "toc menu entry not collected")
+assert(ns.Compartment:Label("AddonMenu_FakeBags") == "Fake Bags", "menu entry label kept its color codes")
+local tool = ns.Collector.byName["AddonMenu_Custom Tool"]
+assert(tool, "registered menu entry not collected")
+assert(ns.Collector.byName["Bagnonly"], "LibDBIcon button not collected")
+assert(ns.Collector.byName["AddonMenu_Bagnonly"] == nil, "menu entry duplicated a collected button")
+assert(ns.Collector.byName["AddonMenu_FakeScanner"] == nil,
+	"menu entry duplicated a button named after its addon")
+
+bags.frame:GetScript("OnClick")(bags.frame, "RightButton")
+assert(menuClicks[1] == "FakeBags:RightButton", "toc entry click did not reach the addon")
+tool.frame:GetScript("OnClick")(tool.frame, "LeftButton")
+assert(custom.button == "LeftButton" and custom.frame == tool.frame,
+	"registered entry click did not get the mouse button and the stand-in")
+onShow(ns.Options.panel) -- the opt-out list names menu entries
+
+ns.db.profile.collect.compartment = false
+ns.Collector:Rescan()
+assert(ns.Collector.byName["AddonMenu_FakeBags"] == nil, "menu entries stayed with the option off")
+ns.db.profile.collect.compartment = true
+ns.Collector:Rescan()
+assert(ns.Collector.byName["AddonMenu_Custom Tool"], "menu entries did not come back with the option on")
+
+for i, entry in ipairs(AddonCompartmentFrame.registeredAddons) do
+	if entry.text == "Custom Tool" then table.remove(AddonCompartmentFrame.registeredAddons, i) break end
+end
+AddonCompartmentFrame:UpdateDisplay()
+assert(ns.Collector.byName["AddonMenu_Custom Tool"] == nil, "removed menu entry stayed in the tray")
+print("[9] addon menu entries OK")
 
 print("\n\27[32mHALO HEADLESS TEST: PASS\27[0m")

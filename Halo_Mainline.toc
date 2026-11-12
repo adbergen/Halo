@@ -19,6 +19,7 @@ Locales\Locales.xml
 
 # ─── Core ────────────────────────────────────────────────────────────
 Core\Init.lua
+Core\Compartment.lua
 Core\Detector.lua
 Core\Collector.lua
 Core\Launcher.lua

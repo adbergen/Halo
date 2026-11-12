@@ -28,14 +28,17 @@ read_globals = {
 	"Settings", "SlashCmdList", "wipe", "unpack", "GetCursorPosition",
 	"GameFontNormal", "GameFontNormalLarge", "GameFontHighlight",
 	"GameFontHighlightSmall", "GameFontDisableSmall",
+	"C_Texture", "MenuInputContext", "WOW_PROJECT_ID", "WOW_PROJECT_MAINLINE",
+	"AddonCompartmentFrame",
 }
 
 -- The headless test harness deliberately defines stand-ins for WoW globals.
 files["Tests/"] = {
 	globals = {
 		"CreateFrame", "hooksecurefunc", "C_Timer", "C_AddOns",
-		"GetAddOnMetadata", "MouseIsOver", "wipe", "SlashCmdList", "Settings",
+		"GetAddOnMetadata", "wipe", "SlashCmdList", "Settings",
 		"LibStub", "UIParent", "Minimap", "MinimapBackdrop", "GameTooltip",
-		"unpack", "GetCursorPosition",
+		"unpack", "GetCursorPosition", "AddonCompartmentFrame",
+		"WOW_PROJECT_ID", "WOW_PROJECT_MAINLINE", "FakeBags_OnAddonMenu",
 	},
 }
