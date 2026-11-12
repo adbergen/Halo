@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-11
+
 ### Added
 - **Blizzard's addon menu, in the tray.** On Retail and WoW Forever, addons listed
   in the addon menu beside the minimap clock now get a button in the tray too, so
@@ -105,7 +107,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Headless CI: luacheck plus a mock-WoW load test that simulates a full session.
 - BigWigs packager release workflow.
 
-[Unreleased]: https://github.com/adbergen/Halo/compare/v1.3.2...HEAD
+[Unreleased]: https://github.com/adbergen/Halo/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/adbergen/Halo/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/adbergen/Halo/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/adbergen/Halo/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/adbergen/Halo/compare/v1.2.0...v1.3.0
